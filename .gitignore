@@ -1,0 +1,80 @@
+# Ambientes Virtuais
+venv/
+env/
+.venv/
+ENV/
+
+# Cache do Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Arquivos de distribuição / pacotes
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Logs de instalação
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Relatórios de teste e cobertura
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.pytest_cache/
+
+# Traduções
+*.mo
+*.pot
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# Celery
+celerybeat-schedule
+
+# Arquivos de ambiente e segredos
+.env
+*.env.*
+
+# Configurações de IDE e editores
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+*.swp
+*~
+
+# Logs
+*.log
+
+# Dados da aplicação
+app_data/
+
+# Docker
+.dockerignore
+
+# Arquivos do sistema operacional
+.DS_Store
+Thumbs.db

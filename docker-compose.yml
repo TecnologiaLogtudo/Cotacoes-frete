@@ -1,0 +1,72 @@
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: logtudo-redis
+    restart: unless-stopped
+    expose:
+      - "6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: logtudo-app
+    restart: unless-stopped
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      - TZ=America/Sao_Paulo
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    volumes:
+      - app_data:/app/data
+    expose:
+      - "8000"
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.logtudo-cotacoes.rule=Host(`logtudo.com.br`) && PathPrefix(`/cotacoes`)
+      - traefik.http.routers.logtudo-cotacoes.entrypoints=http,https
+      - traefik.http.routers.logtudo-cotacoes.middlewares=logtudo-cotacoes-strip
+      - traefik.http.middlewares.logtudo-cotacoes-strip.stripprefix.prefixes=/cotacoes
+      - traefik.http.services.logtudo-cotacoes.loadbalancer.server.port=8000
+      - coolify.managed=true
+      - coolify.proxy=true
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/health')\" || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    command: ["uvicorn", "automacao.api:app", "--host", "0.0.0.0", "--port", "8000"]
+
+  celery-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: logtudo-celery-worker
+    restart: unless-stopped
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      - TZ=America/Sao_Paulo
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - LOGTUDO_USER=${LOGTUDO_USER:-ATUALIZARBI}
+      - LOGTUDO_PASS=${LOGTUDO_PASS:-}
+    volumes:
+      - app_data:/app/data
+    command: ["celery", "-A", "automacao.celery_app.celery_app", "worker", "--loglevel=INFO", "--concurrency=1"]
+    healthcheck:
+      test: ["CMD-SHELL", "celery -A automacao.celery_app.celery_app inspect ping -d celery@$$HOSTNAME | grep -q pong || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  app_data:

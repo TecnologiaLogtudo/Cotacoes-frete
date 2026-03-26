@@ -1,0 +1,42 @@
+{
+  "urls": {
+    "login": "https://logtudo.e-login.net/",
+    "cotacoes_frete": "https://logtudo.e-login.net/versoes/versao5.0/rotinas/c.php?id=transp_cotacoesFrete&menu=s"
+  },
+  "selectors": {
+    "campo_usuario": "input[name='usuario']",
+    "campo_senha": "input[name='senha']",
+    "botao_entrar": "#botaoSubmit",
+    "botao_adicionar": "img[title='Adicionar'][src*='ADICIONAR.svg']",
+    "radio_pagamento_frete": "input[name='dados_pagamentoFrete']",
+    "select_agencia": "select[name='dados_agencias_id']",
+    "select_status": "select[name='dados_statusPedidos_id']",
+    "select_regra_frete": "select[name='dados_regraFrete_id']",
+    "botao_sugerir_tabela_precos": "img[title='Sugerir tabela de preços']",
+    "campo_frete_negociado": "input[name='dados_outrosValores[fn]']",
+    "campo_operacao": "input[name='pesquisa_tipoOperacaoTMS_id']",
+    "botao_pesquisar_operacao": "i[name='botaoPesquisa_tipoOperacaoTMS_id']",
+    "campo_km": "input[name='dados_qtKm']",
+    "campo_numero": "input[name='dados_nro']",
+    "campo_numero_pedido_cliente": "input[name='dados_nroPedidoCliente']",
+    "campo_validade": "input[name='dados_dtFinal']",
+    "select_categoria_veiculo": "select[name='dados_categoriaVeiculo_id']",
+    "campo_pesquisa_remetente": "input[name='pesquisa_enderecoRemetente_id']",
+    "botao_pesquisar_remetente": "i[name='botaoPesquisa_enderecoRemetente_id']",
+    "select_remetente": "select[name='dados_enderecoRemetente_id']",
+    "campo_uf_ini": "input[name='dados_UFIni']",
+    "campo_uf_fim": "input[name='dados_UFFim']",
+    "select_cidade_ini": "select[name='dados_cMunIni']",
+    "campo_pesquisa_cidade_fim": "input[name='pesquisa_cMunFim']",
+    "campo_obs_interna": "textarea[name='dados_obsInterna']",
+    "botao_cadastrar": "input#botao_cadastrar[name='botao_finalizacao'][value='Cadastrar']"
+  },
+  "options": {
+    "agencia_matriz_bahia": "LOGTUDO MATRIZ - BAHIA",
+    "status_aprovado_cliente": "Aprovado Cliente",
+    "regra_frete_cotacao_latam": "COTAÇÃO LATAM",
+    "operacao_carga_fechada": "Carga fechada",
+    "termo_pesquisa_remetente": "Tam linhas",
+    "pagamento_frete_radio_value": "R"
+  }
+}

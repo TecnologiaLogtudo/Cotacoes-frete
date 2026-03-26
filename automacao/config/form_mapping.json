@@ -1,0 +1,54 @@
+{
+  "spreadsheet": {
+    "header_row": 3,
+    "read_mode": "one_form_per_filled_row",
+    "max_rows_to_scan": 100
+  },
+  "field_mapping": [
+    {
+      "source_type": "column",
+      "source_name": "Número",
+      "target_selector_key": "campo_numero"
+    },
+    {
+      "source_type": "column",
+      "source_name": "Número",
+      "target_selector_key": "campo_numero_pedido_cliente"
+    },
+    {
+      "source_type": "user_input",
+      "source_name": "Validade",
+      "target_selector_key": "campo_validade"
+    },
+    {
+      "source_type": "column",
+      "source_name": "Perfil",
+      "target_selector_key": "select_categoria_veiculo"
+    },
+    {
+      "source_type": "column",
+      "source_name": "Base",
+      "target_selector_key": "select_remetente",
+      "match_mode": "contains_city_between_dashes"
+    },
+    {
+      "source_type": "cross_by_date_header",
+      "source_header_row": 3,
+      "source_column_header_from_user_input": "data_referencia",
+      "source_row_mode": "current_automation_row",
+      "target_selector_key": "campo_frete_negociado"
+    },
+    {
+      "source_type": "composed",
+      "source_columns": [
+        "Nome",
+        "Placa"
+      ],
+      "source_user_inputs": [
+        "data_referencia"
+      ],
+      "target_selector_key": "campo_obs_interna",
+      "template": "Motorista: {Nome} | Placa: {Placa} | Data: {data_referencia}"
+    }
+  ]
+}

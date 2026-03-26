@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Manual de Uso - Cotações</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      background: #f3f8fb;
+      color: #1f2d36;
+    }
+    .container {
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+    .card {
+      background: #fff;
+      border: 1px solid #d8e4ec;
+      border-radius: 14px;
+      padding: 20px;
+      box-shadow: 0 10px 24px rgba(0, 0, 0, 0.06);
+    }
+    h1 {
+      margin-top: 0;
+      color: #114a5e;
+    }
+    h2 {
+      margin-top: 22px;
+      color: #1a5b73;
+    }
+    ul {
+      padding-left: 20px;
+      line-height: 1.55;
+    }
+    code {
+      background: #eef4f8;
+      border: 1px solid #d5e3ec;
+      border-radius: 6px;
+      padding: 2px 6px;
+      font-family: Consolas, monospace;
+    }
+    .tip {
+      margin-top: 18px;
+      padding: 12px;
+      border-radius: 10px;
+      background: #fff9e8;
+      border: 1px solid #f0dd9c;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="card">
+      <h1>Manual de Uso - Cotação Logtudo</h1>
+      <p>Este manual descreve o fluxo da página web de processamento de cotações.</p>
+
+      <h2>1. Acesso</h2>
+      <ul>
+        <li>Acesse a tela principal de cotação no domínio configurado.</li>
+        <li>As credenciais informadas na interface ficam salvas somente no navegador (localStorage).</li>
+      </ul>
+
+      <h2>2. Preenchimento do formulário</h2>
+      <ul>
+        <li>Informe <strong>Login</strong> e <strong>Senha</strong> do site Logtudo.</li>
+        <li>Informe <strong>Data de Cotação</strong> e <strong>Validade</strong>.</li>
+        <li>Selecione a planilha no botão de upload (arquivo <code>.xlsx</code>).</li>
+      </ul>
+
+      <h2>3. Execução</h2>
+      <ul>
+        <li>Clique em <strong>Iniciar processamento</strong>.</li>
+        <li>O sistema cria um job assíncrono via Celery/Redis.</li>
+        <li>O processamento considera as primeiras 100 linhas de dados e ignora/remover linhas sem <strong>Número</strong>.</li>
+      </ul>
+
+      <h2>4. Acompanhamento de logs</h2>
+      <ul>
+        <li>Os logs são atualizados automaticamente (polling).</li>
+        <li>Você pode pausar/retomar o auto-scroll para leitura.</li>
+        <li>Ao final, o status indica <strong>SUCCESS</strong> ou <strong>FAILURE</strong>.</li>
+      </ul>
+
+      <h2>5. Solução de problemas</h2>
+      <ul>
+        <li>Se o upload falhar, confirme se o arquivo é <code>.xlsx</code>.</li>
+        <li>Se houver erro de autenticação, revise login/senha.</li>
+        <li>Se o job ficar travado, valide saúde de <code>redis</code> e <code>celery-worker</code>.</li>
+      </ul>
+
+      <div class="tip">
+        Dica: mantenha a planilha com cabeçalho na linha 3 e dados consistentes nas colunas esperadas para evitar rejeições.
+      </div>
+    </div>
+  </div>
+</body>
+</html>
