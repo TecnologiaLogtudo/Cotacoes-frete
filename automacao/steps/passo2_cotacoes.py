@@ -46,6 +46,12 @@ OPT_OPERACAO_CARGA_FECHADA = MAPPINGS["options"]["operacao_carga_fechada"]
 OPT_TERMO_PESQ_REMETENTE = MAPPINGS["options"]["termo_pesquisa_remetente"]
 OPT_PAGAMENTO_FRETE_RADIO_VALUE = MAPPINGS["options"]["pagamento_frete_radio_value"]
 
+def aguardar_renderizacao_total(page, contexto: str) -> None:
+    print(f"Aguardando renderizacao total da pagina ({contexto})...")
+    page.wait_for_load_state("domcontentloaded")
+    page.wait_for_load_state("networkidle")
+    page.wait_for_function("() => document.readyState === 'complete'")
+
 
 def normalizar_texto(texto: str) -> str:
     sem_acentos = unicodedata.normalize("NFKD", texto).encode("ASCII", "ignore").decode("ASCII")
@@ -62,9 +68,15 @@ def realizar_login_na_sessao(page, usuario: str, senha: str) -> None:
 
     print("Enviando formulário de login...")
     page.locator(SEL_ENTRAR).click()
-    page.wait_for_load_state("networkidle")
+    aguardar_renderizacao_total(page, contexto="pos-login")
     print("Login concluído com sucesso!")
 
+
+def acessar_url_cotacoes_e_aguardar(page) -> None:
+    print(f"Acessando a URL de cotacoes de frete: {URL_PASSO_2}")
+    page.goto(URL_PASSO_2, wait_until="domcontentloaded")
+    aguardar_renderizacao_total(page, contexto="tela de cotacoes de frete")
+    page.locator(SEL_ADICIONAR).first.wait_for(state="visible")
 
 def marcar_pagamento_frete(page) -> None:
     seletor_radio = f"{SEL_RADIO_PAGAMENTO_FRETE}[value='{OPT_PAGAMENTO_FRETE_RADIO_VALUE}']"
@@ -156,11 +168,11 @@ def clicar_cadastrar_e_aguardar(page) -> None:
     except PlaywrightTimeoutError:
         print("URL nao mudou em 10s; continuando para a próxima linha.")
 
+    aguardar_renderizacao_total(page, contexto="apos-cadastrar")
+
 
 def preencher_formulario_linha(page, linha: LinhaAutomacao, validade: str, data_referencia: str) -> None:
-    print("Acessando passo 2 (cotações de frete)...")
-    page.goto(URL_PASSO_2, wait_until="domcontentloaded")
-    page.wait_for_load_state("networkidle")
+    acessar_url_cotacoes_e_aguardar(page)
 
     print("Clicando em Adicionar...")
     page.locator(SEL_ADICIONAR).first.click()
