@@ -34,8 +34,12 @@ services:
     labels:
       - traefik.enable=true
       - traefik.http.routers.logtudo-cotacoes.rule=Host(`logtudo.com.br`) && PathPrefix(`/cotacoes`)
+      - traefik.http.routers.logtudo-cotacoes.priority=200
       - traefik.http.routers.logtudo-cotacoes.entrypoints=http,https
-      - traefik.http.routers.logtudo-cotacoes.middlewares=logtudo-cotacoes-strip
+      - traefik.http.routers.logtudo-cotacoes.middlewares=logtudo-cotacoes-slash,logtudo-cotacoes-strip
+      - traefik.http.middlewares.logtudo-cotacoes-slash.redirectregex.regex=^https?://([^/]+)/cotacoes$
+      - traefik.http.middlewares.logtudo-cotacoes-slash.redirectregex.replacement=https://$${1}/cotacoes/
+      - traefik.http.middlewares.logtudo-cotacoes-slash.redirectregex.permanent=true
       - traefik.http.middlewares.logtudo-cotacoes-strip.stripprefix.prefixes=/cotacoes
       - traefik.http.services.logtudo-cotacoes.loadbalancer.server.port=8000
       - coolify.managed=true
