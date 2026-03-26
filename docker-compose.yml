@@ -15,6 +15,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        BASE_PATH: ${BASE_PATH:-/cotacoes}
     container_name: logtudo-app
     ipc: host
     security_opt:
@@ -25,6 +27,9 @@ services:
         condition: service_healthy
     environment:
       - TZ=America/Sao_Paulo
+      - APP_HOST=${APP_HOST:-logtudo.com.br}
+      - BASE_PATH=${BASE_PATH:-/cotacoes}
+      - PYTHONUNBUFFERED=1
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
     volumes:
@@ -33,14 +38,20 @@ services:
       - "8000"
     labels:
       - traefik.enable=true
-      - traefik.http.routers.logtudo-cotacoes.rule=Host(`logtudo.com.br`) && PathPrefix(`/cotacoes`)
+      - "traefik.http.routers.logtudo-cotacoes-exact.rule=Host(`${APP_HOST:-logtudo.com.br}`) && Path(`${BASE_PATH:-/cotacoes}`)"
+      - traefik.http.routers.logtudo-cotacoes-exact.priority=300
+      - traefik.http.routers.logtudo-cotacoes-exact.entrypoints=http,https
+      - traefik.http.routers.logtudo-cotacoes-exact.middlewares=logtudo-cotacoes-slash
+      - traefik.http.routers.logtudo-cotacoes-exact.service=logtudo-cotacoes
+      - "traefik.http.routers.logtudo-cotacoes.rule=Host(`${APP_HOST:-logtudo.com.br}`) && PathPrefix(`${BASE_PATH:-/cotacoes}/`)"
       - traefik.http.routers.logtudo-cotacoes.priority=200
       - traefik.http.routers.logtudo-cotacoes.entrypoints=http,https
-      - traefik.http.routers.logtudo-cotacoes.middlewares=logtudo-cotacoes-slash,logtudo-cotacoes-strip
-      - traefik.http.middlewares.logtudo-cotacoes-slash.redirectregex.regex=^https?://([^/]+)/cotacoes$
-      - traefik.http.middlewares.logtudo-cotacoes-slash.redirectregex.replacement=https://$${1}/cotacoes/
+      - traefik.http.routers.logtudo-cotacoes.middlewares=logtudo-cotacoes-strip
+      - traefik.http.routers.logtudo-cotacoes.service=logtudo-cotacoes
+      - "traefik.http.middlewares.logtudo-cotacoes-slash.redirectregex.regex=^https?://([^/]+)${BASE_PATH:-/cotacoes}$"
+      - "traefik.http.middlewares.logtudo-cotacoes-slash.redirectregex.replacement=https://$${1}${BASE_PATH:-/cotacoes}/"
       - traefik.http.middlewares.logtudo-cotacoes-slash.redirectregex.permanent=true
-      - traefik.http.middlewares.logtudo-cotacoes-strip.stripprefix.prefixes=/cotacoes
+      - "traefik.http.middlewares.logtudo-cotacoes-strip.stripprefix.prefixes=${BASE_PATH:-/cotacoes}"
       - traefik.http.services.logtudo-cotacoes.loadbalancer.server.port=8000
       - coolify.managed=true
       - coolify.proxy=true
@@ -55,6 +66,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        BASE_PATH: ${BASE_PATH:-/cotacoes}
     container_name: logtudo-celery-worker
     ipc: host
     security_opt:
@@ -65,6 +78,9 @@ services:
         condition: service_healthy
     environment:
       - TZ=America/Sao_Paulo
+      - APP_HOST=${APP_HOST:-logtudo.com.br}
+      - BASE_PATH=${BASE_PATH:-/cotacoes}
+      - PYTHONUNBUFFERED=1
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
       - LOGTUDO_USER=${LOGTUDO_USER:-ATUALIZARBI}

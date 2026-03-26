@@ -5,6 +5,8 @@ COPY web/package.json ./
 COPY web/vite.config.js ./
 COPY web/index.html ./
 COPY web/src ./src
+ARG BASE_PATH=/cotacoes
+ENV BASE_PATH=${BASE_PATH}
 RUN npm install
 RUN npm run build
 

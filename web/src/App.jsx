@@ -1,3 +1,4 @@
+import React from 'react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 
 const LS_KEYS = {
@@ -235,3 +236,4 @@ export default function App() {
     </div>
   )
 }
+
