@@ -105,7 +105,7 @@ def get_job_logs(task_id: str, cursor: int = 0) -> dict:
     }
 
 
-@app.get("/", include_in_schema=False)
+@app.get("/", include_in_schema=False, response_model=None)
 def index() -> JSONResponse | FileResponse:
     index_file = WEB_DIST / "index.html"
     if index_file.exists():

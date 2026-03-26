@@ -13,12 +13,12 @@ services:
 
   app:
     build:
-      context: .
-      dockerfile: Dockerfile
+      context: ..
+      dockerfile: ../Dockerfile
     container_name: logtudo-app
     ipc: host
     security_opt:
-      - seccomp=./Conectividade/seccomp-playwright.json
+      - seccomp=./seccomp-playwright.json
     restart: unless-stopped
     depends_on:
       redis:
@@ -49,12 +49,12 @@ services:
 
   celery-worker:
     build:
-      context: .
-      dockerfile: Dockerfile
+      context: ..
+      dockerfile: ../Dockerfile
     container_name: logtudo-celery-worker
     ipc: host
     security_opt:
-      - seccomp=./Conectividade/seccomp-playwright.json
+      - seccomp=./seccomp-playwright.json
     restart: unless-stopped
     depends_on:
       redis:
