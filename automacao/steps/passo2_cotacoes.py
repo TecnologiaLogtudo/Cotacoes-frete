@@ -77,7 +77,9 @@ def realizar_login_na_sessao(page, usuario: str, senha: str) -> None:
 
     print("Enviando formulário de login...")
     page.locator(SEL_ENTRAR).click()
-    aguardar_10s_ou_renderizar(page, contexto="pos-login")
+    print("Aguardando 20s apos clicar em Entrar...")
+    page.wait_for_timeout(20000)
+    aguardar_renderizacao_total(page, contexto="pos-login")
     print("Login concluído com sucesso!")
 
 
@@ -85,6 +87,8 @@ def acessar_url_cotacoes_e_aguardar(page) -> None:
     print(f"Acessando a URL de cotacoes de frete: {URL_PASSO_2}")
     page.goto(URL_PASSO_2, wait_until="domcontentloaded")
     aguardar_renderizacao_total(page, contexto="tela de cotacoes de frete")
+    print("Aguardando 10s antes de procurar o botao Adicionar...")
+    page.wait_for_timeout(10000)
     page.locator(SEL_ADICIONAR).first.wait_for(state="visible")
 
 def marcar_pagamento_frete(page) -> None:
