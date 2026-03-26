@@ -53,6 +53,14 @@ def aguardar_renderizacao_total(page, contexto: str) -> None:
     page.wait_for_function("() => document.readyState === 'complete'")
 
 
+
+def aguardar_10s_ou_renderizar(page, contexto: str) -> None:
+    print(f"Aguardando ate 10s ou renderizacao da pagina ({contexto})...")
+    try:
+        page.wait_for_function("() => document.readyState === 'complete'", timeout=10000)
+    except PlaywrightTimeoutError:
+        print(f"Renderizacao nao concluiu em 10s ({contexto}); seguindo fluxo.")
+
 def normalizar_texto(texto: str) -> str:
     sem_acentos = unicodedata.normalize("NFKD", texto).encode("ASCII", "ignore").decode("ASCII")
     return sem_acentos.upper().strip()
@@ -65,10 +73,11 @@ def realizar_login_na_sessao(page, usuario: str, senha: str) -> None:
     print("Preenchendo credenciais...")
     page.locator(SEL_USUARIO).fill(usuario)
     page.locator(SEL_SENHA).fill(senha)
+    page.wait_for_timeout(1500)
 
     print("Enviando formulário de login...")
     page.locator(SEL_ENTRAR).click()
-    aguardar_renderizacao_total(page, contexto="pos-login")
+    aguardar_10s_ou_renderizar(page, contexto="pos-login")
     print("Login concluído com sucesso!")
 
 
@@ -127,8 +136,9 @@ def copiar_uf_e_cidade_origem_para_destino(page) -> None:
 def selecionar_remetente_por_base(page, base: str) -> None:
     print(f"Pesquisando remetente por termo: {OPT_TERMO_PESQ_REMETENTE}")
     page.locator(SEL_PESQ_REMETENTE).fill(OPT_TERMO_PESQ_REMETENTE)
+    page.wait_for_timeout(1000)
     page.locator(SEL_BTN_PESQ_REMETENTE).click()
-    page.wait_for_timeout(800)
+    page.wait_for_timeout(1000)
 
     page.locator(SEL_REMETENTE).wait_for(state="visible")
     opcoes = page.eval_on_selector_all(
@@ -190,10 +200,11 @@ def preencher_formulario_linha(page, linha: LinhaAutomacao, validade: str, data_
 
     print("Digitando Operação: Carga fechada...")
     page.locator(SEL_OPERACAO).fill(OPT_OPERACAO_CARGA_FECHADA)
+    page.wait_for_timeout(1000)
 
     print("Clicando em Pesquisar (Operação)...")
     page.locator(SEL_PESQUISAR_OPERACAO).click()
-    page.wait_for_timeout(800)
+    page.wait_for_timeout(1000)
 
     km_aleatorio = random.randint(50, 100)
     print(f"Preenchendo Km com valor aleatório: {km_aleatorio}")
