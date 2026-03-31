@@ -87,7 +87,7 @@ services:
       - LOGTUDO_PASS=${LOGTUDO_PASS:-}
     volumes:
       - app_data:/app/data
-    command: ["celery", "-A", "automacao.celery_app.celery_app", "worker", "--loglevel=INFO", "--concurrency=1"]
+    command: ["celery", "-A", "automacao.celery_app.celery_app", "worker", "--loglevel=INFO", "--concurrency=1", "--max-tasks-per-child=1"]
     healthcheck:
       test: ["CMD-SHELL", "celery -A automacao.celery_app.celery_app inspect ping -d celery@$$HOSTNAME | grep -q pong || exit 1"]
       interval: 30s

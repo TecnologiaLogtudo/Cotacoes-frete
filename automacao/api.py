@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import logging
+import time
 import uuid
 from pathlib import Path
 
@@ -13,9 +15,12 @@ from automacao.tasks import processar_cotacoes_lote
 
 
 app = FastAPI(title="Logtudo Cotacoes API", version="1.0.0")
+logger = logging.getLogger(__name__)
 
 WEB_DIST = Path(__file__).resolve().parent.parent / "web_dist"
 MANUAL_HTML = Path(__file__).resolve().parent / "manual_de_uso.html"
+UPLOAD_CHUNK_SIZE = 1024 * 1024  # 1 MB
+MAX_XLSX_SIZE_BYTES = 20 * 1024 * 1024  # 20 MB
 
 
 @app.get("/health")
@@ -38,6 +43,7 @@ async def create_cotacao_job(
     validade: str = Form(...),
     planilha: UploadFile = File(...),
 ) -> dict:
+    started_at = time.perf_counter()
     if not planilha.filename:
         raise HTTPException(status_code=400, detail="Arquivo de planilha não informado.")
 
@@ -48,12 +54,44 @@ async def create_cotacao_job(
     job_id = uuid.uuid4().hex
     safe_name = Path(planilha.filename).name
     target = uploads_dir() / f"{job_id}_{safe_name}"
+    bytes_written = 0
+    chunk_count = 0
+    logger.info("Iniciando upload em chunks | job_id=%s | arquivo=%s", job_id, safe_name)
 
-    content = await planilha.read()
-    if not content:
+    try:
+        with target.open("wb") as output:
+            while True:
+                chunk = await planilha.read(UPLOAD_CHUNK_SIZE)
+                if not chunk:
+                    break
+
+                bytes_written += len(chunk)
+                if bytes_written > MAX_XLSX_SIZE_BYTES:
+                    output.close()
+                    target.unlink(missing_ok=True)
+                    raise HTTPException(
+                        status_code=413,
+                        detail="Arquivo excede o limite permitido de 20 MB.",
+                    )
+
+                output.write(chunk)
+                chunk_count += 1
+    finally:
+        await planilha.close()
+
+    if bytes_written == 0:
+        target.unlink(missing_ok=True)
         raise HTTPException(status_code=400, detail="Arquivo enviado está vazio.")
 
-    target.write_bytes(content)
+    upload_elapsed = time.perf_counter() - started_at
+    logger.info(
+        "Upload concluido | job_id=%s | arquivo=%s | bytes=%d | chunks=%d | tempo_upload_s=%.3f",
+        job_id,
+        safe_name,
+        bytes_written,
+        chunk_count,
+        upload_elapsed,
+    )
 
     task = processar_cotacoes_lote.delay(
         usuario=usuario,
@@ -63,6 +101,14 @@ async def create_cotacao_job(
         data_referencia=data_referencia,
         max_rows_to_scan=100,
         job_id=job_id,
+    )
+
+    logger.info(
+        "Job enfileirado | job_id=%s | task_id=%s | arquivo=%s | bytes=%d",
+        job_id,
+        task.id,
+        safe_name,
+        bytes_written,
     )
 
     return {

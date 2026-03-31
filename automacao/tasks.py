@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import gc
 import traceback
 from contextlib import redirect_stderr, redirect_stdout
 from datetime import datetime
 from pathlib import Path
+from time import perf_counter
 
 from celery import current_task
 
@@ -37,6 +39,8 @@ def processar_cotacoes_lote(
         print(f"Data referência: {data_referencia} | Validade: {validade}", file=log)
 
         try:
+            stage_started = perf_counter()
+            print("[stage] inicio_execucao_playwright", file=log)
             with redirect_stdout(log), redirect_stderr(log):
                 executar_passo_2_lote(
                     usuario=usuario,
@@ -46,6 +50,10 @@ def processar_cotacoes_lote(
                     data_referencia=data_referencia,
                     max_rows_to_scan=max_rows_to_scan,
                 )
+            print(
+                f"[stage] fim_execucao_playwright | duracao_s={perf_counter() - stage_started:.3f}",
+                file=log,
+            )
 
             end_ts = datetime.now().isoformat(timespec="seconds")
             print(f"[{end_ts}] Job concluído com sucesso.", file=log)
@@ -65,3 +73,6 @@ def processar_cotacoes_lote(
             print(f"[{end_ts}] ERRO no job: {exc}", file=log)
             print(traceback.format_exc(), file=log)
             raise
+        finally:
+            gc.collect()
+            print("[stage] gc_collect_executado", file=log)

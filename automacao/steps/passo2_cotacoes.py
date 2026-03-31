@@ -6,7 +6,7 @@ from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 
 from Conectividade.playwright_vps_connect import PlaywrightVPSConfig, PlaywrightVPSClient
 from automacao.config_loader import carregar_mapeamento
-from automacao.planilha import LinhaAutomacao, carregar_linhas_para_automacao, tratar_planilha_removendo_linhas_sem_numero
+from automacao.planilha import LinhaAutomacao, carregar_linhas_para_automacao
 
 
 MAPPINGS = carregar_mapeamento()
@@ -248,18 +248,14 @@ def executar_passo_2_lote(
     data_referencia: str,
     max_rows_to_scan: int = 100,
 ) -> None:
-    planilha_tratada = tratar_planilha_removendo_linhas_sem_numero(
-        planilha_path=planilha_path,
-        header_row=3,
-        max_rows_to_scan=max_rows_to_scan,
-    )
-
+    print("[stage] inicio_leitura_planilha")
     linhas = carregar_linhas_para_automacao(
-        planilha_path=planilha_tratada,
+        planilha_path=planilha_path,
         data_referencia=data_referencia,
         header_row=3,
         max_rows_to_scan=max_rows_to_scan,
     )
+    print("[stage] fim_leitura_planilha")
 
     if not linhas:
         print("Nenhuma linha com a coluna 'Número' preenchida foi encontrada no intervalo analisado.")
