@@ -27,6 +27,7 @@ wheels/
 .installed.cfg
 *.egg
 MANIFEST
+node_modules/
 
 # Logs de instalação
 pip-log.txt
