@@ -3,10 +3,7 @@ from __future__ import annotations
 import argparse
 import os
 
-from celery.result import AsyncResult
-
-from automacao.celery_app import celery_app
-from automacao.tasks import processar_cotacoes_lote
+from automacao.queue import enqueue_cotacao_job, fetch_job, serialize_job_result
 
 
 def cmd_enqueue(args: argparse.Namespace) -> None:
@@ -15,7 +12,7 @@ def cmd_enqueue(args: argparse.Namespace) -> None:
     if not senha:
         raise ValueError("Informe --senha ou configure LOGTUDO_PASS.")
 
-    task = processar_cotacoes_lote.delay(
+    task = enqueue_cotacao_job(
         usuario=usuario,
         senha=senha,
         planilha_path=args.planilha,
@@ -27,11 +24,14 @@ def cmd_enqueue(args: argparse.Namespace) -> None:
 
 
 def cmd_status(args: argparse.Namespace) -> None:
-    result = AsyncResult(args.task_id, app=celery_app)
-    print(f"task_id={result.id}")
-    print(f"status={result.status}")
-    if result.ready():
-        print(f"result={result.result}")
+    result = fetch_job(args.task_id)
+    payload = serialize_job_result(result)
+    print(f"task_id={args.task_id}")
+    print(f"status={payload['status']}")
+    if "result" in payload:
+        print(f"result={payload['result']}")
+    if "error" in payload:
+        print(f"error={payload['error']}")
 
 
 def build_parser() -> argparse.ArgumentParser:

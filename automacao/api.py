@@ -5,13 +5,11 @@ import time
 import uuid
 from pathlib import Path
 
-from celery.result import AsyncResult
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse, JSONResponse
 
-from automacao.celery_app import celery_app
 from automacao.job_io import parse_progress_from_log, read_log_incremental, uploads_dir
-from automacao.tasks import processar_cotacoes_lote
+from automacao.queue import enqueue_cotacao_job, fetch_job, serialize_job_result
 
 
 app = FastAPI(title="Logtudo Cotacoes API", version="1.0.0")
@@ -93,7 +91,7 @@ async def create_cotacao_job(
         upload_elapsed,
     )
 
-    task = processar_cotacoes_lote.delay(
+    task = enqueue_cotacao_job(
         usuario=usuario,
         senha=senha,
         planilha_path=str(target),
@@ -121,21 +119,21 @@ async def create_cotacao_job(
 
 @app.get("/api/jobs/{task_id}")
 def get_job_status(task_id: str) -> dict:
-    result = AsyncResult(task_id, app=celery_app)
+    job = fetch_job(task_id)
     progress = parse_progress_from_log(task_id)
+    serialized = serialize_job_result(job)
 
     payload: dict = {
         "task_id": task_id,
-        "status": result.status,
+        "status": serialized["status"],
         "processed_lines": progress["processed_lines"],
         "total_lines": progress["total_lines"],
     }
 
-    if result.ready():
-        if result.successful():
-            payload["result"] = result.result
-        else:
-            payload["error"] = str(result.result)
+    if "result" in serialized:
+        payload["result"] = serialized["result"]
+    if "error" in serialized:
+        payload["error"] = serialized["error"]
 
     return payload
 

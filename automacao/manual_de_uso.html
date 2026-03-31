@@ -73,7 +73,7 @@
       <h2>3. Execução</h2>
       <ul>
         <li>Clique em <strong>Iniciar processamento</strong>.</li>
-        <li>O sistema cria um job assíncrono via Celery/Redis.</li>
+        <li>O sistema cria um job assíncrono via RQ/Redis.</li>
         <li>O processamento considera as primeiras 100 linhas de dados e ignora/remover linhas sem <strong>Número</strong>.</li>
       </ul>
 
@@ -88,7 +88,7 @@
       <ul>
         <li>Se o upload falhar, confirme se o arquivo é <code>.xlsx</code>.</li>
         <li>Se houver erro de autenticação, revise login/senha.</li>
-        <li>Se o job ficar travado, valide saúde de <code>redis</code> e <code>celery-worker</code>.</li>
+        <li>Se o job ficar travado, valide saúde de <code>redis</code> e <code>rq-worker</code>.</li>
       </ul>
 
       <div class="tip">

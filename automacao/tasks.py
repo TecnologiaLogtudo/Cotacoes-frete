@@ -7,14 +7,12 @@ from datetime import datetime
 from pathlib import Path
 from time import perf_counter
 
-from celery import current_task
+from rq import get_current_job
 
-from automacao.celery_app import celery_app
 from automacao.job_io import task_log_path
 from automacao.steps.passo2_cotacoes import executar_passo_2_lote
 
 
-@celery_app.task(name="automacao.processar_cotacoes_lote")
 def processar_cotacoes_lote(
     usuario: str,
     senha: str,
@@ -24,7 +22,8 @@ def processar_cotacoes_lote(
     max_rows_to_scan: int = 100,
     job_id: str | None = None,
 ) -> dict:
-    task_id = current_task.request.id if current_task else "unknown"
+    current_job = get_current_job()
+    task_id = current_job.id if current_job else "unknown"
     log_file = task_log_path(task_id)
 
     arquivo = Path(planilha_path)
