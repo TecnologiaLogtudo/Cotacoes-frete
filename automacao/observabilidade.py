@@ -24,7 +24,15 @@ from rq.registry import (
 from automacao.job_io import jobs_dir, task_log_path, uploads_dir
 
 
-VIDEO_EXTENSIONS = {".webm", ".mp4", ".mov", ".mkv"}
+ARTIFACT_TYPE_BY_EXTENSION = {
+    ".webm": "video",
+    ".mp4": "video",
+    ".mov": "video",
+    ".mkv": "video",
+    ".png": "screenshot",
+    ".jpg": "screenshot",
+    ".jpeg": "screenshot",
+}
 _ARTIFACT_PATH_BY_ID: dict[str, Path] = {}
 _DB_READY = False
 logger = logging.getLogger(__name__)
@@ -900,7 +908,8 @@ def artifacts_for_job(task_id: str) -> list[dict[str, Any]]:
         for file in source.rglob("*"):
             if not file.is_file():
                 continue
-            if file.suffix.lower() not in VIDEO_EXTENSIONS:
+            artifact_type = ARTIFACT_TYPE_BY_EXTENSION.get(file.suffix.lower())
+            if not artifact_type:
                 continue
             if task_id not in file.name and task_id not in str(file.parent):
                 continue
@@ -926,7 +935,7 @@ def artifacts_for_job(task_id: str) -> list[dict[str, Any]]:
                         (
                             artifact_id,
                             task_id,
-                            "video",
+                            artifact_type,
                             str(file),
                             1,
                             _to_iso(datetime.fromtimestamp(stat.st_mtime)),
@@ -939,7 +948,7 @@ def artifacts_for_job(task_id: str) -> list[dict[str, Any]]:
             items.append(
                 {
                     "id": artifact_id,
-                    "type": "video",
+                    "type": artifact_type,
                     "file_path": str(file),
                     "available": True,
                     "created_at": _to_iso(datetime.fromtimestamp(stat.st_mtime)),
@@ -995,7 +1004,7 @@ def artifact_file_path(artifact_id: str) -> Path | None:
 
     for source in _artifact_sources():
         for file in source.rglob("*"):
-            if not file.is_file() or file.suffix.lower() not in VIDEO_EXTENSIONS:
+            if not file.is_file() or file.suffix.lower() not in ARTIFACT_TYPE_BY_EXTENSION:
                 continue
             if _artifact_id(file) == artifact_id:
                 _ARTIFACT_PATH_BY_ID[artifact_id] = file
@@ -1019,7 +1028,7 @@ def reset_logs(password: str) -> None:
     except Exception:
         logger.exception("Falha ao limpar tabelas SQLite de observabilidade")
 
-    # limpa arquivos de logs e vídeos ligados à observabilidade
+    # limpa arquivos de logs e artefatos ligados à observabilidade
     for path in jobs_dir().glob("*.log"):
         try:
             path.unlink(missing_ok=True)
@@ -1028,7 +1037,7 @@ def reset_logs(password: str) -> None:
 
     for source in _artifact_sources():
         for file in source.rglob("*"):
-            if file.is_file() and file.suffix.lower() in VIDEO_EXTENSIONS:
+            if file.is_file() and file.suffix.lower() in ARTIFACT_TYPE_BY_EXTENSION:
                 try:
                     file.unlink(missing_ok=True)
                 except Exception:

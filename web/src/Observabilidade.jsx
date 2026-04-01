@@ -46,7 +46,7 @@ export default function Observabilidade() {
   const [actions, setActions] = useState([])
   const [steps, setSteps] = useState([])
   const [browserLogs, setBrowserLogs] = useState([])
-  const [artifactVideo, setArtifactVideo] = useState(null)
+  const [artifacts, setArtifacts] = useState([])
   const [actionsJobId, setActionsJobId] = useState('')
   const [stepsJobId, setStepsJobId] = useState('')
   const [artifactsJobId, setArtifactsJobId] = useState('')
@@ -173,7 +173,7 @@ export default function Observabilidade() {
       setActions([])
       setSteps([])
       setBrowserLogs([])
-      setArtifactVideo(null)
+      setArtifacts([])
       return
     }
 
@@ -213,20 +213,18 @@ export default function Observabilidade() {
     const res = await fetch(apiUrl(`/admin/jobs/${jobId}/artifacts`))
     if (!res.ok) {
       showToast('Falha ao carregar artefatos', 'error')
-      setArtifactVideo(null)
+      setArtifacts([])
       return
     }
     const data = await res.json()
-    const firstVideo = (data.items || [])[0]
-    if (!firstVideo) {
-      setArtifactVideo(null)
-      return
-    }
-    setArtifactVideo({
-      src: apiUrl(`/admin/artifacts/${firstVideo.id}/file`),
-      createdAt: firstVideo.created_at,
-      filePath: firstVideo.file_path,
-    })
+    const items = (data.items || []).map((item) => ({
+      id: item.id,
+      type: item.type || 'video',
+      src: apiUrl(`/admin/artifacts/${item.id}/file`),
+      createdAt: item.created_at,
+      filePath: item.file_path,
+    }))
+    setArtifacts(items)
   }
 
   async function loadBrowser(jobId) {
@@ -480,23 +478,27 @@ export default function Observabilidade() {
           {activeTab === 'artifacts' && (
             <section className="panel active">
               <div className="panel-header">
-                <h2>Artefatos (Video)</h2>
+                <h2>Artefatos</h2>
                 <input type="text" value={artifactsJobId} onChange={(e) => setArtifactsJobId(e.target.value)} placeholder="Job ID" />
                 <button className="btn" disabled={!!loading.artifacts} onClick={() => handleTabLoad(artifactsJobId, 'artifacts', 'Artefatos')}>
                   {loading.artifacts ? 'Carregando...' : 'Carregar'}
                 </button>
               </div>
 
-              {!artifactVideo && <div className="table-empty">Nenhum video encontrado para este job.</div>}
+              {!artifacts.length && <div className="table-empty">Nenhum artefato encontrado para este job.</div>}
 
-              {artifactVideo && (
-                <div className="artifact-video-section">
-                  <h3>Video do Artefato</h3>
-                  <video className="artifact-video-player" controls preload="metadata" src={artifactVideo.src} />
-                  <a className="artifact-video-open-link" href={artifactVideo.src} target="_blank" rel="noopener noreferrer">Abrir video em nova aba</a>
-                  <div className="admin-subtitle">{artifactVideo.filePath} {artifactVideo.createdAt ? `| ${formatDateTime(artifactVideo.createdAt)}` : ''}</div>
+              {artifacts.map((artifact) => (
+                <div key={artifact.id} className="artifact-video-section">
+                  <h3>{artifact.type === 'video' ? 'Video' : 'Screenshot'}</h3>
+                  {artifact.type === 'video' ? (
+                    <video className="artifact-video-player" controls preload="metadata" src={artifact.src} />
+                  ) : (
+                    <img className="artifact-video-player" src={artifact.src} alt="Screenshot do job" />
+                  )}
+                  <a className="artifact-video-open-link" href={artifact.src} target="_blank" rel="noopener noreferrer">Abrir em nova aba</a>
+                  <div className="admin-subtitle">{artifact.filePath} {artifact.createdAt ? `| ${formatDateTime(artifact.createdAt)}` : ''}</div>
                 </div>
-              )}
+              ))}
             </section>
           )}
 

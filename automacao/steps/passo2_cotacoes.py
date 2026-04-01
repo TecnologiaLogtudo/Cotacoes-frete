@@ -1,6 +1,8 @@
 import os
 import random
 import unicodedata
+from datetime import datetime
+from pathlib import Path
 
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 
@@ -45,6 +47,17 @@ OPT_REGRA_FRETE_COTACAO_LATAM = MAPPINGS["options"]["regra_frete_cotacao_latam"]
 OPT_OPERACAO_CARGA_FECHADA = MAPPINGS["options"]["operacao_carga_fechada"]
 OPT_TERMO_PESQ_REMETENTE = MAPPINGS["options"]["termo_pesquisa_remetente"]
 OPT_PAGAMENTO_FRETE_RADIO_VALUE = MAPPINGS["options"]["pagamento_frete_radio_value"]
+
+
+def _capturar_screenshot_erro(page, artifacts_path: str | None) -> Path | None:
+    if not artifacts_path:
+        return None
+
+    target_dir = Path(artifacts_path)
+    target_dir.mkdir(parents=True, exist_ok=True)
+    screenshot_path = target_dir / f"erro-{datetime.now().strftime('%Y%m%d-%H%M%S')}.png"
+    page.screenshot(path=str(screenshot_path), full_page=True)
+    return screenshot_path
 
 def aguardar_renderizacao_total(page, contexto: str) -> None:
     print(f"Aguardando renderizacao total da pagina ({contexto})...")
@@ -247,6 +260,7 @@ def executar_passo_2_lote(
     validade: str,
     data_referencia: str,
     max_rows_to_scan: int = 100,
+    artifacts_path: str | None = None,
 ) -> None:
     print("[stage] inicio_leitura_planilha")
     linhas = carregar_linhas_para_automacao(
@@ -263,21 +277,32 @@ def executar_passo_2_lote(
 
     print(f"Total de linhas elegíveis para automação: {len(linhas)}")
 
-    config = PlaywrightVPSConfig(headless=True)
+    config = PlaywrightVPSConfig(headless=True, record_video_dir=artifacts_path)
     with PlaywrightVPSClient(config) as client:
         page = client.page
-        realizar_login_na_sessao(page, usuario=usuario, senha=senha)
+        try:
+            realizar_login_na_sessao(page, usuario=usuario, senha=senha)
 
-        for idx, linha in enumerate(linhas, start=1):
-            print(
-                f"\\nProcessando linha {idx}/{len(linhas)} da planilha (excel row {linha.excel_row}, Número {linha.numero})"
-            )
-            preencher_formulario_linha(
-                page,
-                linha=linha,
-                validade=validade,
-                data_referencia=data_referencia,
-            )
+            for idx, linha in enumerate(linhas, start=1):
+                print(
+                    f"\\nProcessando linha {idx}/{len(linhas)} da planilha (excel row {linha.excel_row}, Número {linha.numero})"
+                )
+                preencher_formulario_linha(
+                    page,
+                    linha=linha,
+                    validade=validade,
+                    data_referencia=data_referencia,
+                )
+        except Exception as exc:
+            screenshot_path = None
+            try:
+                screenshot_path = _capturar_screenshot_erro(page, artifacts_path)
+            except Exception as screenshot_exc:
+                print(f"[artifact] Falha ao salvar screenshot de erro: {screenshot_exc}")
+            if screenshot_path:
+                print(f"[artifact] Screenshot de erro salvo em: {screenshot_path}")
+                setattr(exc, "artifact_screenshot_path", str(screenshot_path))
+            raise
 
     print("Lote concluído.")
 
@@ -293,6 +318,7 @@ def executar_passo_2(
     data_referencia: str,
     nome_motorista: str,
     placa: str,
+    artifacts_path: str | None = None,
 ) -> None:
     linha = LinhaAutomacao(
         numero=numero,
@@ -304,7 +330,7 @@ def executar_passo_2(
         excel_row=0,
     )
 
-    config = PlaywrightVPSConfig(headless=True)
+    config = PlaywrightVPSConfig(headless=True, record_video_dir=artifacts_path)
     with PlaywrightVPSClient(config) as client:
         page = client.page
         realizar_login_na_sessao(page, usuario=usuario, senha=senha)

@@ -16,6 +16,18 @@ def uploads_dir() -> Path:
     return path
 
 
+def artifacts_dir() -> Path:
+    path = Path('/app/data/artifacts')
+    path.mkdir(parents=True, exist_ok=True)
+    return path
+
+
+def task_artifacts_dir(task_id: str) -> Path:
+    path = artifacts_dir() / task_id
+    path.mkdir(parents=True, exist_ok=True)
+    return path
+
+
 def task_log_path(task_id: str) -> Path:
     return jobs_dir() / f"{task_id}.log"
 

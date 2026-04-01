@@ -10,7 +10,7 @@ from time import perf_counter
 
 from rq import get_current_job
 
-from automacao.job_io import task_log_path
+from automacao.job_io import task_artifacts_dir, task_log_path
 from automacao.observabilidade import (
     register_job_completed,
     register_job_failed,
@@ -66,6 +66,7 @@ def processar_cotacoes_lote(
     current_job = get_current_job()
     task_id = current_job.id if current_job else "unknown"
     log_file = task_log_path(task_id)
+    artifacts_path = task_artifacts_dir(task_id)
 
     arquivo = Path(planilha_path)
     if not arquivo.exists():
@@ -95,6 +96,7 @@ def processar_cotacoes_lote(
                     validade=validade,
                     data_referencia=data_referencia,
                     max_rows_to_scan=max_rows_to_scan,
+                    artifacts_path=str(artifacts_path),
                 )
             print(
                 f"[stage] fim_execucao_playwright | duracao_s={perf_counter() - stage_started:.3f}",
@@ -127,12 +129,23 @@ def processar_cotacoes_lote(
         except Exception as exc:
             end_ts = datetime.now().isoformat(timespec="seconds")
             erro_usuario = _mensagem_erro_usuario(exc, data_referencia=data_referencia)
+            screenshot_path = getattr(exc, "artifact_screenshot_path", None)
             print(f"[{end_ts}] ERRO no job.", file=log)
+            if screenshot_path:
+                print(f"[artifact] Screenshot de erro salvo em: {screenshot_path}", file=log)
             print(f"[usuario] {erro_usuario}", file=log)
             print("[usuario] Verifique o layout da planilha (cabecalho na linha 3) e reenfileire o job.", file=log)
             print("[tecnico] Traceback completo:", file=log)
             print(traceback.format_exc(), file=log)
             register_job_message(task_id, "ERRO no job.", timestamp=end_ts, username=usuario, ip=client_ip)
+            if screenshot_path:
+                register_job_message(
+                    task_id,
+                    f"[artifact] Screenshot de erro salvo em: {screenshot_path}",
+                    timestamp=end_ts,
+                    username=usuario,
+                    ip=client_ip,
+                )
             register_job_message(task_id, f"[usuario] {erro_usuario}", timestamp=end_ts, username=usuario, ip=client_ip)
             register_job_message(
                 task_id,
