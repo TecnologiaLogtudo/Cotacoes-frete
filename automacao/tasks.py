@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import gc
+import re
 import traceback
 from contextlib import redirect_stderr, redirect_stdout
 from datetime import datetime
@@ -11,6 +12,38 @@ from rq import get_current_job
 
 from automacao.job_io import task_log_path
 from automacao.steps.passo2_cotacoes import executar_passo_2_lote
+
+
+def _mensagem_erro_usuario(exc: Exception, data_referencia: str) -> str:
+    mensagem = str(exc).strip() or "Falha inesperada durante a automacao."
+    mensagem_norm = mensagem.lower()
+
+    if re.search(r"cabecalho ['\"]base['\"] nao encontrado na linha 3", mensagem_norm):
+        return (
+            "Nao foi possivel ler a planilha: a coluna obrigatoria 'Base' nao foi encontrada "
+            "na linha 3 (cabecalho). Ajuste a linha 3 e tente novamente."
+        )
+
+    if re.search(r"cabecalho ['\"]perfil['\"] nao encontrado na linha 3", mensagem_norm):
+        return (
+            "Nao foi possivel ler a planilha: a coluna obrigatoria 'Perfil' nao foi encontrada "
+            "na linha 3 (cabecalho). Ajuste a linha 3 e tente novamente."
+        )
+
+    if re.search(r"cabecalho ['\"]numero['\"] nao encontrado na linha 3", mensagem_norm):
+        return (
+            "Nao foi possivel ler a planilha: a coluna obrigatoria 'Numero' nao foi encontrada "
+            "na linha 3 (cabecalho). Ajuste a linha 3 e tente novamente."
+        )
+
+    if "nao foi encontrada coluna de data" in mensagem_norm:
+        return (
+            f"Nao foi possivel ler a planilha: nao encontramos a coluna da data '{data_referencia}' "
+            "na linha 3. Formatos aceitos incluem '27-mar' e '27/03/2026'. "
+            "Confira o titulo da coluna e tente novamente."
+        )
+
+    return mensagem
 
 
 def processar_cotacoes_lote(
@@ -69,9 +102,13 @@ def processar_cotacoes_lote(
             }
         except Exception as exc:
             end_ts = datetime.now().isoformat(timespec="seconds")
-            print(f"[{end_ts}] ERRO no job: {exc}", file=log)
+            erro_usuario = _mensagem_erro_usuario(exc, data_referencia=data_referencia)
+            print(f"[{end_ts}] ERRO no job.", file=log)
+            print(f"[usuario] {erro_usuario}", file=log)
+            print("[usuario] Verifique o layout da planilha (cabecalho na linha 3) e reenfileire o job.", file=log)
+            print("[tecnico] Traceback completo:", file=log)
             print(traceback.format_exc(), file=log)
-            raise
+            raise RuntimeError(erro_usuario) from exc
         finally:
             gc.collect()
             print("[stage] gc_collect_executado", file=log)

@@ -221,30 +221,32 @@ export default function App() {
                   <h2>Parâmetros de Execução</h2>
                 </div>
                 <div className="card-body form-grid single-col-form">
-                  <label className="field">
-                    <span>Usuário</span>
-                    <input value={usuario} onChange={(e) => setUsuario(e.target.value)} placeholder="Usuário Ravex" />
-                  </label>
+                  <div className="credentials-row">
+                    <label className="field">
+                      <span>Usuário (URL da automação)</span>
+                      <input value={usuario} onChange={(e) => setUsuario(e.target.value)} placeholder="Usuário da plataforma de automação" />
+                    </label>
 
-                  <label className="field">
-                    <span>Senha</span>
-                    <div className="password-row">
-                      <input
-                        type={showSenha ? 'text' : 'password'}
-                        value={senha}
-                        onChange={(e) => setSenha(e.target.value)}
-                        placeholder="Senha Ravex"
-                      />
-                      <button type="button" className="btn ghost password-toggle" onClick={() => setShowSenha((v) => !v)}>
-                        {showSenha ? 'Ocultar' : 'Mostrar'}
-                      </button>
-                    </div>
-                  </label>
+                    <label className="field">
+                      <span>Senha (URL da automação)</span>
+                      <div className="password-row">
+                        <input
+                          type={showSenha ? 'text' : 'password'}
+                          value={senha}
+                          onChange={(e) => setSenha(e.target.value)}
+                          placeholder="Senha da plataforma de automação"
+                        />
+                        <button type="button" className="btn ghost password-toggle" onClick={() => setShowSenha((v) => !v)}>
+                          {showSenha ? 'Ocultar' : 'Mostrar'}
+                        </button>
+                      </div>
+                    </label>
 
-                  <label className="field">
-                    <span>Data da cotação</span>
-                    <input type="date" value={dataReferencia} onChange={(e) => setDataReferencia(e.target.value)} />
-                  </label>
+                    <label className="field">
+                      <span>Data da cotação</span>
+                      <input type="date" value={dataReferencia} onChange={(e) => setDataReferencia(e.target.value)} />
+                    </label>
+                  </div>
 
                   <div className="field">
                     <span>Selecionar arquivo</span>
@@ -276,6 +278,11 @@ export default function App() {
                   <div className="summary-line">
                     <strong>Andamento</strong>
                     <span>Enfileirados: {enfileirado}</span>
+                  </div>
+
+                  <div className="summary-progress-head">
+                    <span className="summary-progress-label">Progresso atual</span>
+                    <strong className="summary-progress-value">{progressPct}%</strong>
                   </div>
 
                   <div className="progress">

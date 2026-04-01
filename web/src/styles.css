@@ -334,6 +334,12 @@ body {
   grid-template-columns: 1fr;
 }
 
+.credentials-row {
+  display: grid;
+  grid-template-columns: 1.1fr 1.1fr 0.8fr;
+  gap: 12px;
+}
+
 .field {
   display: flex;
   flex-direction: column;
@@ -480,7 +486,24 @@ th {
   align-items: center;
   justify-content: space-between;
   color: var(--text-muted);
+  font-size: 14px;
+}
+
+.summary-progress-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.summary-progress-label {
+  color: var(--text-muted);
   font-size: 13px;
+}
+
+.summary-progress-value {
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 26px;
+  line-height: 1;
 }
 
 .summary-stats {
@@ -494,6 +517,10 @@ th {
   display: flex;
   flex-direction: column;
   gap: 4px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 12px;
+  padding: 10px 12px;
 }
 
 .summary-stats strong,
@@ -505,13 +532,14 @@ th {
 
 .summary-stats span,
 .summary-bottom span {
-  font-size: 14px;
+  font-size: 17px;
   color: var(--text);
+  font-weight: 600;
 }
 
 .summary-bottom {
   border-top: 1px solid var(--border);
-  padding-top: 10px;
+  padding-top: 12px;
   display: grid;
   grid-template-columns: 1.2fr 1fr;
   gap: 12px;
@@ -644,6 +672,9 @@ th {
 }
 
 @media (max-width: 1100px) {
+  .credentials-row {
+    grid-template-columns: 1fr;
+  }
   .grid.two-col {
     grid-template-columns: 1fr;
   }

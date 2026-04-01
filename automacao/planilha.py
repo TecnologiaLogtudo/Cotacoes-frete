@@ -6,6 +6,7 @@ from datetime import date, datetime
 from pathlib import Path
 from typing import Any, Dict, List
 import unicodedata
+import re
 
 from openpyxl import load_workbook
 
@@ -58,14 +59,116 @@ def _mapear_headers(ws, header_row: int) -> Dict[str, int]:
 
 def _encontrar_coluna_data(ws, header_row: int, data_referencia: str) -> int:
     data_norm = _normalizar(data_referencia)
+    data_ref_parts = _extrair_partes_data(data_referencia)
     for col in range(1, ws.max_column + 1):
-        cabecalho = _texto_celula(ws.cell(row=header_row, column=col).value)
+        valor_cabecalho = ws.cell(row=header_row, column=col).value
+        cabecalho = _texto_celula(valor_cabecalho)
         if cabecalho and _normalizar(cabecalho) == data_norm:
             return col
 
+        # Match flexível para cenários como:
+        # - cabeçalho exibido como "27-mar"
+        # - valor interno/formula exibido como "27/03/2026"
+        if data_ref_parts:
+            cabecalho_parts = _extrair_partes_data(valor_cabecalho)
+            if _mesma_data(data_ref_parts, cabecalho_parts):
+                return col
+
+    cabecalhos_encontrados: List[str] = []
+    for col in range(1, ws.max_column + 1):
+        texto = _texto_celula(ws.cell(row=header_row, column=col).value)
+        if texto:
+            cabecalhos_encontrados.append(texto)
+    resumo_cabecalhos = ", ".join(cabecalhos_encontrados[:12]) if cabecalhos_encontrados else "(vazio)"
+
     raise ValueError(
-        f"Nao foi encontrada coluna de data '{data_referencia}' na linha de cabecalho {header_row}."
+        f"Nao foi encontrada coluna de data '{data_referencia}' na linha de cabecalho {header_row}. "
+        f"Cabecalhos encontrados: {resumo_cabecalhos}"
     )
+
+
+def _extrair_partes_data(valor: Any) -> tuple[int, int, int | None] | None:
+    if valor is None:
+        return None
+
+    if isinstance(valor, datetime):
+        return (valor.day, valor.month, valor.year)
+    if isinstance(valor, date):
+        return (valor.day, valor.month, valor.year)
+
+    texto = str(valor).strip()
+    if not texto:
+        return None
+
+    # dd/mm/yyyy, dd-mm-yyyy, dd.mm.yyyy
+    m = re.fullmatch(r"(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})", texto)
+    if m:
+        dia = int(m.group(1))
+        mes = int(m.group(2))
+        ano = int(m.group(3))
+        if ano < 100:
+            ano += 2000
+        return (dia, mes, ano)
+
+    # yyyy-mm-dd
+    m = re.fullmatch(r"(\d{4})-(\d{1,2})-(\d{1,2})", texto)
+    if m:
+        ano = int(m.group(1))
+        mes = int(m.group(2))
+        dia = int(m.group(3))
+        return (dia, mes, ano)
+
+    # dd-mmm (pt-BR/pt-PT), ex: 27-mar
+    m = re.fullmatch(r"(\d{1,2})\s*[-\/]\s*([a-zA-ZçÇ]{3,9})", texto, flags=re.IGNORECASE)
+    if m:
+        dia = int(m.group(1))
+        mes_txt = _normalizar(m.group(2))
+        meses = {
+            "JAN": 1,
+            "FEV": 2,
+            "FEB": 2,
+            "MAR": 3,
+            "ABR": 4,
+            "APR": 4,
+            "MAI": 5,
+            "MAY": 5,
+            "JUN": 6,
+            "JUL": 7,
+            "AGO": 8,
+            "AUG": 8,
+            "SET": 9,
+            "SEP": 9,
+            "OUT": 10,
+            "OCT": 10,
+            "NOV": 11,
+            "DEZ": 12,
+            "DEC": 12,
+        }
+        mes = meses.get(mes_txt[:3])
+        if mes:
+            return (dia, mes, None)
+
+    return None
+
+
+def _mesma_data(
+    referencia: tuple[int, int, int | None] | None,
+    candidata: tuple[int, int, int | None] | None,
+) -> bool:
+    if not referencia or not candidata:
+        return False
+
+    dia_ref, mes_ref, ano_ref = referencia
+    dia_can, mes_can, ano_can = candidata
+
+    if dia_ref != dia_can or mes_ref != mes_can:
+        return False
+
+    # Quando o cabeçalho vem como "dd-mmm", não há ano explícito.
+    if ano_ref is None or ano_can is None:
+        return True
+
+    return ano_ref == ano_can
 
 
 def _encontrar_coluna_numero(ws, header_row: int) -> int:

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import re
 from typing import Any
 
 from redis import Redis
@@ -79,6 +80,25 @@ def serialize_job_result(job: Job | None) -> dict[str, Any]:
     if status == "SUCCESS":
         payload["result"] = job.result
     elif status == "FAILURE":
-        payload["error"] = job.exc_info or "Job finalizado com falha."
+        payload["error"] = _extrair_mensagem_erro(job.exc_info)
 
     return payload
+
+
+def _extrair_mensagem_erro(exc_info: str | None) -> str:
+    if not exc_info:
+        return "Job finalizado com falha."
+
+    linhas = [linha.strip() for linha in exc_info.splitlines() if linha.strip()]
+    if not linhas:
+        return "Job finalizado com falha."
+
+    for linha in reversed(linhas):
+        if linha.lower().startswith("runtimeerror:"):
+            return linha.split(":", 1)[1].strip() or "Job finalizado com falha."
+
+    ultima_linha = linhas[-1]
+    if re.match(r"^[a-zA-Z_][\w.]*:", ultima_linha):
+        return ultima_linha.split(":", 1)[1].strip() or "Job finalizado com falha."
+
+    return ultima_linha

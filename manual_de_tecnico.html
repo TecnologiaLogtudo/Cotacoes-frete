@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Manual de Uso - LogTudo Cotações</title>
+  <style>
+    :root {
+      --bg: #eef4fb;
+      --bg-soft: #f8fbff;
+      --card: #ffffff;
+      --text: #152533;
+      --muted: #4f6475;
+      --line: #d3e1ed;
+      --title: #0f4763;
+      --title-2: #1a5b79;
+      --code-bg: #eef5fc;
+      --code-line: #cfe0f0;
+      --note-bg: #fff9ea;
+      --note-line: #ecd8a0;
+      --op-bg: #edf7ff;
+      --op-line: #bcdcf8;
+      --platform-bg: #effbf2;
+      --platform-line: #c1e9cb;
+      --data-bg: #f4f0ff;
+      --data-line: #d8cdf6;
+      --support-bg: #fff2ee;
+      --support-line: #f5cdc0;
+    }
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(180deg, var(--bg), var(--bg-soft));
+      color: var(--text);
+      line-height: 1.55;
+    }
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 22px;
+      box-shadow: 0 12px 28px rgba(16, 45, 72, 0.08);
+    }
+    h1 {
+      margin: 0 0 6px;
+      color: var(--title);
+      font-size: 30px;
+    }
+    h2 {
+      margin: 0;
+      color: var(--title-2);
+      font-size: 22px;
+    }
+    h3 {
+      margin: 18px 0 8px;
+      color: var(--title-2);
+      font-size: 18px;
+    }
+    p {
+      margin: 8px 0 0;
+    }
+    ul {
+      margin: 8px 0 0;
+      padding-left: 22px;
+    }
+    li + li {
+      margin-top: 4px;
+    }
+    .muted {
+      color: var(--muted);
+    }
+    .table-wrap {
+      overflow-x: auto;
+      margin-top: 10px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+      min-width: 760px;
+    }
+    th,
+    td {
+      text-align: left;
+      border-bottom: 1px solid var(--line);
+      padding: 10px 12px;
+      vertical-align: top;
+    }
+    th {
+      background: #f0f6fb;
+      color: #244e66;
+      font-weight: 700;
+    }
+    code {
+      background: var(--code-bg);
+      border: 1px solid var(--code-line);
+      border-radius: 6px;
+      padding: 2px 6px;
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 13px;
+    }
+    .note {
+      margin-top: 18px;
+      padding: 12px;
+      border-radius: 10px;
+      background: var(--note-bg);
+      border: 1px solid var(--note-line);
+    }
+    .small {
+      font-size: 13px;
+    }
+    .intro {
+      margin-top: 14px;
+      padding: 14px 16px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: linear-gradient(135deg, #f4f9ff, #f8fbff);
+    }
+    .section-block {
+      margin-top: 16px;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      background: #fff;
+      padding: 16px;
+      transition: background-color 0.25s ease, border-color 0.25s ease;
+    }
+    .section-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 8px;
+      border-bottom: 1px dashed var(--line);
+      padding-bottom: 10px;
+    }
+    .responsibility {
+      display: inline-block;
+      border-radius: 999px;
+      padding: 4px 10px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.2px;
+      border: 1px solid transparent;
+      white-space: nowrap;
+    }
+    .section-block.is-op {
+      background: linear-gradient(180deg, #ffffff, var(--op-bg));
+      border-color: var(--op-line);
+    }
+    .section-block.is-op .responsibility {
+      background: var(--op-bg);
+      border-color: var(--op-line);
+      color: #1b5785;
+    }
+    .section-block.is-platform {
+      background: linear-gradient(180deg, #ffffff, var(--platform-bg));
+      border-color: var(--platform-line);
+    }
+    .section-block.is-platform .responsibility {
+      background: var(--platform-bg);
+      border-color: var(--platform-line);
+      color: #1f6840;
+    }
+    .section-block.is-data {
+      background: linear-gradient(180deg, #ffffff, var(--data-bg));
+      border-color: var(--data-line);
+    }
+    .section-block.is-data .responsibility {
+      background: var(--data-bg);
+      border-color: var(--data-line);
+      color: #59418d;
+    }
+    .section-block.is-support {
+      background: linear-gradient(180deg, #ffffff, var(--support-bg));
+      border-color: var(--support-line);
+    }
+    .section-block.is-support .responsibility {
+      background: var(--support-bg);
+      border-color: var(--support-line);
+      color: #a24a32;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="card">
+      <h1>Manual do Usuário - LogTudo Cotações</h1>
+      <p class="muted">Atualizado com o estado atual do app (frontend React, API FastAPI, fila RQ/Redis e automação Playwright).</p>
+      <div class="intro">
+        Este manual está organizado por responsabilidades para facilitar manutenção e operação diária. Cada bloco usa uma tonalidade suave para indicar a área principal responsável.
+      </div>
+
+      <section class="section-block is-op">
+        <div class="section-head">
+          <h2>1) Visão geral do sistema</h2>
+          <span class="responsibility">Responsável: Operação</span>
+        </div>
+        <ul>
+          <li>O sistema recebe uma planilha <code>.xlsx</code>, cria um job assíncrono e processa os registros no portal LogTudo.</li>
+          <li>A interface web permite iniciar execução, acompanhar progresso em tempo real e consultar logs detalhados.</li>
+          <li>A automação usa Playwright e roda no worker, desacoplando interface e processamento pesado.</li>
+        </ul>
+      </section>
+
+      <section class="section-block is-platform">
+        <div class="section-head">
+          <h2>2) Funcionalidades implementadas no app</h2>
+          <span class="responsibility">Responsável: Plataforma</span>
+        </div>
+        <h3>2.1 Frontend (tela principal)</h3>
+        <ul>
+          <li>Abas de navegação: <strong>Processamento</strong>, <strong>Logs</strong> e link para este manual.</li>
+          <li>Campos de entrada: <strong>Usuário</strong>, <strong>Senha</strong>, <strong>Data da cotação</strong> e upload de planilha.</li>
+          <li>Botão para mostrar/ocultar senha na interface.</li>
+          <li>Persistência local no navegador (<code>localStorage</code>) para usuário, senha e data da cotação.</li>
+          <li>Envio do job com botão <strong>Iniciar</strong> e reset visual do estado com botão <strong>Parar</strong>.</li>
+          <li>Resumo operacional com status, progresso percentual, total previsto, linhas processadas e Task ID.</li>
+          <li>Atualização de status/logs a cada 2 segundos (polling).</li>
+          <li>Auto-scroll dos logs com opção para ativar/desativar.</li>
+        </ul>
+
+        <h3>2.2 Backend/API</h3>
+        <ul>
+          <li><code>POST /api/jobs/cotacoes</code> para criar job de processamento.</li>
+          <li><code>GET /api/jobs/{task_id}</code> para status e progresso.</li>
+          <li><code>GET /api/jobs/{task_id}/logs</code> para leitura incremental de logs com cursor.</li>
+          <li><code>GET /health</code> para healthcheck.</li>
+          <li><code>GET /manual-de-uso</code> para abrir este manual.</li>
+          <li>Serviço de arquivos estáticos do frontend buildado (SPA com fallback para <code>index.html</code>).</li>
+        </ul>
+
+        <h3>2.3 Processamento assíncrono</h3>
+        <ul>
+          <li>Fila RQ com Redis para execução de jobs.</li>
+          <li>Mapeamento de status da fila para status da UI: <code>PENDING</code>, <code>STARTED</code>, <code>SUCCESS</code>, <code>FAILURE</code>.</li>
+          <li>Logs por task em <code>/app/data/jobs/{task_id}.log</code>.</li>
+          <li>Uploads em <code>/app/data/uploads</code>.</li>
+        </ul>
+      </section>
+
+      <section class="section-block is-data">
+        <div class="section-head">
+          <h2>3) Regras de entrada e validações</h2>
+          <span class="responsibility">Responsável: Dados e Qualidade</span>
+        </div>
+        <ul>
+          <li>Formato aceito no upload: somente <code>.xlsx</code>.</li>
+          <li>Tamanho máximo do arquivo: <strong>20 MB</strong>.</li>
+          <li>Upload em chunks de 1 MB para reduzir risco de estouro de memória.</li>
+          <li>Arquivo vazio é rejeitado.</li>
+          <li>Campos obrigatórios na API/UI: usuário, senha, data de referência e planilha.</li>
+        </ul>
+
+        <h3>3.1 Regras da planilha</h3>
+        <ul>
+          <li>Cabeçalho esperado na linha <strong>3</strong>.</li>
+          <li>Processamento limitado às primeiras <strong>100 linhas</strong> após o cabeçalho (configuração atual).</li>
+          <li>Linhas sem valor na coluna <strong>Número</strong> são ignoradas.</li>
+          <li>Cabeçalhos obrigatórios: <strong>Número</strong>, <strong>Perfil</strong> e <strong>Base</strong>.</li>
+          <li>Coluna de frete é encontrada pelo texto da <strong>data de referência</strong> informado pelo usuário (na linha de cabeçalho).</li>
+        </ul>
+
+        <h3>3.2 Mapeamento de campos da automação</h3>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Origem</th>
+                <th>Destino no formulário</th>
+                <th>Regra</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Coluna <code>Número</code></td>
+                <td>Nº e Nº Pedido Cliente</td>
+                <td>Mesmo valor nos dois campos</td>
+              </tr>
+              <tr>
+                <td>Entrada do usuário</td>
+                <td>Validade</td>
+                <td>Usa a data da cotação convertida para <code>dd/mm/aaaa</code></td>
+              </tr>
+              <tr>
+                <td>Coluna <code>Perfil</code></td>
+                <td>Categoria Veículo</td>
+                <td>Seleciona por label</td>
+              </tr>
+              <tr>
+                <td>Coluna <code>Base</code></td>
+                <td>Remetente</td>
+                <td>Busca opção pelo padrão de cidade no texto da opção</td>
+              </tr>
+              <tr>
+                <td>Cruzamento por data</td>
+                <td>Frete Negociado</td>
+                <td>Lê a célula da coluna da data selecionada</td>
+              </tr>
+              <tr>
+                <td>Colunas <code>Nome</code> + <code>Placa</code> + data</td>
+                <td>Obs. Interna</td>
+                <td>Formato: <code>Motorista: X | Placa: Y | Data: Z</code></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>3.3 Regras fixas aplicadas durante o preenchimento</h3>
+        <ul>
+          <li>Agência: <code>LOGTUDO MATRIZ - BAHIA</code>.</li>
+          <li>Status: <code>Aprovado Cliente</code>.</li>
+          <li>Regra de frete: <code>COTAÇÃO LATAM</code>.</li>
+          <li>Operação: <code>Carga fechada</code>.</li>
+          <li>Pagamento de frete: rádio com value <code>R</code>.</li>
+          <li>KM preenchido com valor aleatório entre <strong>50 e 100</strong>.</li>
+          <li>UF inicial copiada para UF final.</li>
+          <li>Cidade inicial copiada para pesquisa de cidade final.</li>
+        </ul>
+      </section>
+
+      <section class="section-block is-op">
+        <div class="section-head">
+          <h2>4) Fluxo operacional (passo a passo)</h2>
+          <span class="responsibility">Responsável: Operação</span>
+        </div>
+        <ol>
+          <li>Abra o app no caminho configurado (ex.: <code>/cotacoes/</code>).</li>
+          <li>Preencha usuário, senha e data da cotação.</li>
+          <li>Selecione a planilha <code>.xlsx</code>.</li>
+          <li>Clique em <strong>Iniciar</strong>.</li>
+          <li>Acompanhe status e logs em tempo real.</li>
+          <li>Ao final, valide se o status ficou <code>SUCCESS</code> e revise os logs de conclusão.</li>
+        </ol>
+      </section>
+
+      <section class="section-block is-platform">
+        <div class="section-head">
+          <h2>5) Logs e progresso</h2>
+          <span class="responsibility">Responsável: Plataforma</span>
+        </div>
+        <ul>
+          <li>O progresso é inferido pelos logs: cada ocorrência de <code>Processando linha</code> incrementa linhas processadas.</li>
+          <li>O total previsto vem da mensagem <code>Total de linhas elegíveis para automação</code>.</li>
+          <li>Em caso de erro, o traceback é gravado no log da task.</li>
+        </ul>
+      </section>
+
+      <section class="section-block is-data">
+        <div class="section-head">
+          <h2>6) Variáveis de ambiente e configuração</h2>
+          <span class="responsibility">Responsável: Dados e Infra</span>
+        </div>
+        <p class="small muted">Ajuste conforme seu ambiente. Não versionar segredos em repositório.</p>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Variável</th>
+                <th>Uso</th>
+                <th>Padrão atual</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>APP_HOST</code></td>
+                <td>Domínio usado nas regras do Traefik</td>
+                <td><code>logtudo.com.br</code></td>
+              </tr>
+              <tr>
+                <td><code>BASE_PATH</code></td>
+                <td>Prefixo da aplicação no proxy e build do frontend</td>
+                <td><code>/cotacoes</code></td>
+              </tr>
+              <tr>
+                <td><code>REDIS_URL</code></td>
+                <td>Conexão Redis para API/worker</td>
+                <td><code>redis://redis:6379/0</code></td>
+              </tr>
+              <tr>
+                <td><code>RQ_QUEUE_NAME</code></td>
+                <td>Nome da fila RQ</td>
+                <td><code>cotacoes</code></td>
+              </tr>
+              <tr>
+                <td><code>RQ_JOB_TIMEOUT_SECONDS</code></td>
+                <td>Timeout de execução de job</td>
+                <td><code>7200</code></td>
+              </tr>
+              <tr>
+                <td><code>RQ_RESULT_TTL_SECONDS</code></td>
+                <td>TTL do resultado do job</td>
+                <td><code>86400</code></td>
+              </tr>
+              <tr>
+                <td><code>TZ</code></td>
+                <td>Timezone dos containers</td>
+                <td><code>America/Sao_Paulo</code></td>
+              </tr>
+              <tr>
+                <td><code>PYTHONUNBUFFERED</code></td>
+                <td>Flush imediato de logs Python</td>
+                <td><code>1</code></td>
+              </tr>
+              <tr>
+                <td><code>PLAYWRIGHT_HEADLESS</code></td>
+                <td>Modo headless para execução Playwright</td>
+                <td><code>true</code></td>
+              </tr>
+              <tr>
+                <td><code>LOGTUDO_USER</code></td>
+                <td>Usuário padrão para execuções de worker/script</td>
+                <td><code>ATUALIZARBI</code> (fallback)</td>
+              </tr>
+              <tr>
+                <td><code>LOGTUDO_PASS</code></td>
+                <td>Senha padrão para execuções por CLI/worker</td>
+                <td>vazio (obrigatório quando não enviado pela UI)</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>6.1 Variáveis de execução direta (script)</h3>
+        <ul>
+          <li>Modo lote: <code>LOGTUDO_PLANILHA</code>, <code>LOGTUDO_VALIDADE</code>, <code>LOGTUDO_DATA_REFERENCIA</code>.</li>
+          <li>Modo unitário: <code>LOGTUDO_NUMERO</code>, <code>LOGTUDO_PERFIL</code>, <code>LOGTUDO_BASE</code>, <code>LOGTUDO_FRETE_NEGOCIADO</code>, <code>LOGTUDO_NOME_MOTORISTA</code>, <code>LOGTUDO_PLACA</code>.</li>
+        </ul>
+      </section>
+
+      <section class="section-block is-platform">
+        <div class="section-head">
+          <h2>7) Configurações técnicas do app</h2>
+          <span class="responsibility">Responsável: Plataforma</span>
+        </div>
+        <ul>
+          <li>Seletores e URLs da automação: <code>automacao/config/selectors.json</code>.</li>
+          <li>Mapa formal de campos: <code>automacao/config/form_mapping.json</code>.</li>
+          <li>Conectividade Playwright em VPS: pasta <code>Conectividade/</code> com seccomp e compose dedicados.</li>
+        </ul>
+      </section>
+
+      <section class="section-block is-support">
+        <div class="section-head">
+          <h2>8) Solução de problemas</h2>
+          <span class="responsibility">Responsável: Suporte</span>
+        </div>
+        <ul>
+          <li><strong>Erro 400 no upload:</strong> confirme extensão <code>.xlsx</code> e campos obrigatórios.</li>
+          <li><strong>Erro 413:</strong> arquivo acima de 20 MB.</li>
+          <li><strong>Falha de login:</strong> revise usuário/senha informados na tela.</li>
+          <li><strong>Sem progresso no job:</strong> valide saúde de <code>redis</code>, <code>app</code> e <code>rq-worker</code>.</li>
+          <li><strong>Remetente não encontrado:</strong> revise conteúdo da coluna <code>Base</code> e opções disponíveis no portal.</li>
+          <li><strong>Erro de cabeçalho:</strong> garanta linha 3 com <code>Número</code>, <code>Perfil</code>, <code>Base</code> e coluna da data informada.</li>
+        </ul>
+      </section>
+
+      <div class="note">
+        Recomendação operacional: valide uma pequena amostra da planilha antes de processar lotes maiores e acompanhe os logs da task até o status final.
+      </div>
+    </div>
+  </div>
+</body>
+</html>

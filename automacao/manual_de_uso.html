@@ -3,96 +3,245 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Manual de Uso - Cotações</title>
+  <title>Manual do Usuário - LogTudo Cotações</title>
   <style>
+    :root {
+      --bg: #eef4fb;
+      --bg-soft: #f8fbff;
+      --card: #ffffff;
+      --text: #152533;
+      --muted: #4f6475;
+      --line: #d3e1ed;
+      --title: #0f4763;
+      --title-2: #1a5b79;
+      --code-bg: #eef5fc;
+      --code-line: #cfe0f0;
+      --note-bg: #fff9ea;
+      --note-line: #ecd8a0;
+      --op-bg: #edf7ff;
+      --op-line: #bcdcf8;
+      --check-bg: #effbf2;
+      --check-line: #c1e9cb;
+      --alert-bg: #fff2ee;
+      --alert-line: #f5cdc0;
+    }
+    * {
+      box-sizing: border-box;
+    }
     body {
       margin: 0;
       font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-      background: #f3f8fb;
-      color: #1f2d36;
+      background: linear-gradient(180deg, var(--bg), var(--bg-soft));
+      color: var(--text);
+      line-height: 1.55;
     }
     .container {
-      max-width: 980px;
+      max-width: 1100px;
       margin: 0 auto;
       padding: 24px;
     }
     .card {
-      background: #fff;
-      border: 1px solid #d8e4ec;
-      border-radius: 14px;
-      padding: 20px;
-      box-shadow: 0 10px 24px rgba(0, 0, 0, 0.06);
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 22px;
+      box-shadow: 0 12px 28px rgba(16, 45, 72, 0.08);
     }
     h1 {
-      margin-top: 0;
-      color: #114a5e;
+      margin: 0 0 6px;
+      color: var(--title);
+      font-size: 30px;
     }
     h2 {
-      margin-top: 22px;
-      color: #1a5b73;
+      margin: 0;
+      color: var(--title-2);
+      font-size: 22px;
     }
-    ul {
-      padding-left: 20px;
-      line-height: 1.55;
+    h3 {
+      margin: 18px 0 8px;
+      color: var(--title-2);
+      font-size: 18px;
+    }
+    p {
+      margin: 8px 0 0;
+    }
+    ul, ol {
+      margin: 8px 0 0;
+      padding-left: 22px;
+    }
+    li + li {
+      margin-top: 4px;
+    }
+    .muted {
+      color: var(--muted);
     }
     code {
-      background: #eef4f8;
-      border: 1px solid #d5e3ec;
+      background: var(--code-bg);
+      border: 1px solid var(--code-line);
       border-radius: 6px;
       padding: 2px 6px;
-      font-family: Consolas, monospace;
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 13px;
     }
-    .tip {
+    .intro {
+      margin-top: 14px;
+      padding: 14px 16px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: linear-gradient(135deg, #f4f9ff, #f8fbff);
+    }
+    .section-block {
+      margin-top: 16px;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      background: #fff;
+      padding: 16px;
+    }
+    .section-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 8px;
+      border-bottom: 1px dashed var(--line);
+      padding-bottom: 10px;
+    }
+    .badge {
+      display: inline-block;
+      border-radius: 999px;
+      padding: 4px 10px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.2px;
+      border: 1px solid transparent;
+      white-space: nowrap;
+    }
+    .section-block.is-op {
+      background: linear-gradient(180deg, #ffffff, var(--op-bg));
+      border-color: var(--op-line);
+    }
+    .section-block.is-op .badge {
+      background: var(--op-bg);
+      border-color: var(--op-line);
+      color: #1b5785;
+    }
+    .section-block.is-check {
+      background: linear-gradient(180deg, #ffffff, var(--check-bg));
+      border-color: var(--check-line);
+    }
+    .section-block.is-check .badge {
+      background: var(--check-bg);
+      border-color: var(--check-line);
+      color: #1f6840;
+    }
+    .section-block.is-alert {
+      background: linear-gradient(180deg, #ffffff, var(--alert-bg));
+      border-color: var(--alert-line);
+    }
+    .section-block.is-alert .badge {
+      background: var(--alert-bg);
+      border-color: var(--alert-line);
+      color: #a24a32;
+    }
+    .note {
       margin-top: 18px;
       padding: 12px;
       border-radius: 10px;
-      background: #fff9e8;
-      border: 1px solid #f0dd9c;
+      background: var(--note-bg);
+      border: 1px solid var(--note-line);
     }
   </style>
 </head>
 <body>
   <div class="container">
     <div class="card">
-      <h1>Manual de Uso - Cotação Logtudo</h1>
-      <p>Este manual descreve o fluxo da página web de processamento de cotações.</p>
+      <h1>Manual do Usuário - LogTudo Cotações</h1>
+      <p class="muted">Guia prático para executar cotações no sistema de forma segura e padronizada.</p>
+      <div class="intro">
+        Este manual é focado em uso da tela e operação do dia a dia. Para detalhes técnicos, consulte o manual técnico na raiz do projeto.
+      </div>
 
-      <h2>1. Acesso</h2>
-      <ul>
-        <li>Acesse a tela principal de cotação no domínio configurado.</li>
-        <li>As credenciais informadas na interface ficam salvas somente no navegador (localStorage).</li>
-      </ul>
+      <section class="section-block is-op">
+        <div class="section-head">
+          <h2>1) Antes de começar</h2>
+          <span class="badge">Preparação</span>
+        </div>
+        <ul>
+          <li>Tenha em mãos seu <strong>usuário</strong> e <strong>senha</strong> do portal.</li>
+          <li>Tenha a planilha no formato <code>.xlsx</code>.</li>
+          <li>Confirme a <strong>data da cotação</strong> que será usada no processamento.</li>
+          <li>Evite processar planilhas muito grandes sem antes testar uma amostra.</li>
+        </ul>
+      </section>
 
-      <h2>2. Preenchimento do formulário</h2>
-      <ul>
-        <li>Informe <strong>Login</strong> e <strong>Senha</strong> do site Logtudo.</li>
-        <li>Informe <strong>Data de Cotação</strong> e <strong>Validade</strong>.</li>
-        <li>Selecione a planilha no botão de upload (arquivo <code>.xlsx</code>).</li>
-      </ul>
+      <section class="section-block is-check">
+        <div class="section-head">
+          <h2>2) Como preencher a tela</h2>
+          <span class="badge">Uso da Interface</span>
+        </div>
+        <ol>
+          <li>Abra a aba <strong>Processamento</strong>.</li>
+          <li>Preencha <strong>Usuário</strong> e <strong>Senha</strong>.</li>
+          <li>Selecione a <strong>Data da cotação</strong>.</li>
+          <li>Clique no campo de upload e escolha a planilha <code>.xlsx</code>.</li>
+          <li>Revise os dados e clique em <strong>Iniciar</strong>.</li>
+        </ol>
+      </section>
 
-      <h2>3. Execução</h2>
-      <ul>
-        <li>Clique em <strong>Iniciar processamento</strong>.</li>
-        <li>O sistema cria um job assíncrono via RQ/Redis.</li>
-        <li>O processamento considera as primeiras 100 linhas de dados e ignora/remover linhas sem <strong>Número</strong>.</li>
-      </ul>
+      <section class="section-block is-op">
+        <div class="section-head">
+          <h2>3) Acompanhando a execução</h2>
+          <span class="badge">Monitoramento</span>
+        </div>
+        <ul>
+          <li>Observe o <strong>Status</strong> da execução e o percentual de progresso.</li>
+          <li>Acompanhe o painel de <strong>Logs</strong> para verificar cada etapa processada.</li>
+          <li>Use a opção de auto-scroll para manter a leitura dos logs no final da lista.</li>
+          <li>Ao terminar, confirme se o status final está como <code>SUCCESS</code>.</li>
+        </ul>
+      </section>
 
-      <h2>4. Acompanhamento de logs</h2>
-      <ul>
-        <li>Os logs são atualizados automaticamente (polling).</li>
-        <li>Você pode pausar/retomar o auto-scroll para leitura.</li>
-        <li>Ao final, o status indica <strong>SUCCESS</strong> ou <strong>FAILURE</strong>.</li>
-      </ul>
+      <section class="section-block is-check">
+        <div class="section-head">
+          <h2>4) Boas práticas de operação</h2>
+          <span class="badge">Qualidade</span>
+        </div>
+        <ul>
+          <li>Faça um teste com poucas linhas antes de rodar uma planilha completa.</li>
+          <li>Evite alterar a estrutura da planilha durante a execução.</li>
+          <li>Mantenha padrão de preenchimento em colunas críticas como <strong>Número</strong>, <strong>Perfil</strong> e <strong>Base</strong>.</li>
+          <li>Guarde o identificador da execução (Task ID) para consulta posterior.</li>
+        </ul>
+      </section>
 
-      <h2>5. Solução de problemas</h2>
-      <ul>
-        <li>Se o upload falhar, confirme se o arquivo é <code>.xlsx</code>.</li>
-        <li>Se houver erro de autenticação, revise login/senha.</li>
-        <li>Se o job ficar travado, valide saúde de <code>redis</code> e <code>rq-worker</code>.</li>
-      </ul>
+      <section class="section-block is-alert">
+        <div class="section-head">
+          <h2>5) Problemas comuns e o que fazer</h2>
+          <span class="badge">Ação Rápida</span>
+        </div>
+        <ul>
+          <li><strong>Arquivo rejeitado:</strong> confirme se a extensão é <code>.xlsx</code>.</li>
+          <li><strong>Erro ao iniciar:</strong> revise usuário, senha, data e se a planilha foi anexada.</li>
+          <li><strong>Status sem avançar:</strong> aguarde alguns segundos e consulte a aba de logs.</li>
+          <li><strong>Falha ao finalizar:</strong> copie a mensagem de erro exibida e encaminhe ao suporte.</li>
+        </ul>
+      </section>
 
-      <div class="tip">
-        Dica: mantenha a planilha com cabeçalho na linha 3 e dados consistentes nas colunas esperadas para evitar rejeições.
+      <section class="section-block is-op">
+        <div class="section-head">
+          <h2>6) Checklist final da execução</h2>
+          <span class="badge">Fechamento</span>
+        </div>
+        <ol>
+          <li>Verifique se o status final é <code>SUCCESS</code>.</li>
+          <li>Confirme no log se todas as linhas esperadas foram processadas.</li>
+          <li>Registre o Task ID da execução.</li>
+          <li>Se houver falha, não repita imediatamente em lote: valide uma amostra primeiro.</li>
+        </ol>
+      </section>
+
+      <div class="note">
+        Dica: para evitar retrabalho, valide sempre uma amostra da planilha no início do dia antes de processar volumes maiores.
       </div>
     </div>
   </div>
