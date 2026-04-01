@@ -16,6 +16,8 @@ from automacao.observabilidade import (
     artifacts_for_job,
     browser_logs_for_job,
     list_jobs,
+    register_job_enqueued,
+    register_job_ip,
     reset_logs,
     steps_for_job,
     summary,
@@ -115,10 +117,18 @@ async def create_cotacao_job(
         data_referencia=data_referencia,
         max_rows_to_scan=100,
         job_id=job_id,
+        client_ip=request.client.host if request.client else None,
+    )
+    register_job_enqueued(
+        task.id,
+        job_id=job_id,
+        username=usuario,
+        ip=request.client.host if request.client else None,
     )
     try:
         task.meta["client_ip"] = request.client.host if request.client else None
         task.save_meta()
+        register_job_ip(task.id, request.client.host if request.client else None)
     except Exception:
         logger.warning("Nao foi possivel salvar metadado de IP no job %s", task.id)
 
