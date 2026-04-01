@@ -836,6 +836,13 @@ th {
   border: 1px solid var(--border);
 }
 
+.observability-page .panel-header input:focus,
+.observability-page .panel-header select:focus {
+  outline: 2px solid rgba(143, 193, 255, 0.65);
+  outline-offset: 1px;
+  border-color: rgba(143, 193, 255, 0.55);
+}
+
 .observability-page .kpi-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -864,6 +871,7 @@ th {
 
 .observability-page .jobs-row {
   cursor: pointer;
+  transition: background 0.2s ease;
 }
 
 .observability-page .jobs-row:hover td {
@@ -874,6 +882,69 @@ th {
 .observability-page .jobs-row.active td {
   background: rgba(43, 108, 176, 0.28);
   color: var(--text);
+}
+
+.observability-page .selected-job-feedback {
+  margin-left: auto;
+  padding: 8px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.observability-page .selected-job-feedback strong {
+  color: var(--text);
+}
+
+.observability-page .copy-id-btn {
+  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text);
+  border-radius: 8px;
+  padding: 6px 8px;
+  cursor: copy;
+  transition: all 0.18s ease;
+}
+
+.observability-page .copy-id-btn:hover {
+  background: rgba(143, 193, 255, 0.12);
+  border-color: rgba(143, 193, 255, 0.4);
+}
+
+.observability-page .copy-id-btn:focus {
+  outline: 2px solid rgba(143, 193, 255, 0.65);
+  outline-offset: 1px;
+}
+
+.observability-page .copy-id-btn.copied {
+  background: rgba(71, 201, 150, 0.18);
+  border-color: rgba(71, 201, 150, 0.55);
+}
+
+.observability-page .copy-id-text {
+  font-family: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  font-size: 12px;
+}
+
+.observability-page .copy-id-hint {
+  font-size: 11px;
+  color: #9fc0ea;
+}
+
+.observability-page .copy-id-btn.copied .copy-id-hint {
+  color: #8ef0c8;
+}
+
+.observability-page .btn:focus {
+  outline: 2px solid rgba(143, 193, 255, 0.65);
+  outline-offset: 1px;
 }
 
 .observability-page .artifact-video-section {
@@ -914,6 +985,46 @@ th {
 
 .observability-page .mt-16 {
   margin-top: 16px;
+}
+
+.toast-root {
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  z-index: 1200;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.toast {
+  min-width: 220px;
+  max-width: 320px;
+  border-radius: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  background: #1a2233;
+  color: var(--text);
+  box-shadow: var(--shadow);
+  opacity: 0;
+  transform: translateY(4px);
+}
+
+.toast.show {
+  opacity: 1;
+  transform: translateY(0);
+  transition: all 0.2s ease;
+}
+
+.toast.success {
+  border-color: rgba(71, 201, 150, 0.5);
+  background: rgba(31, 74, 60, 0.92);
+}
+
+.toast.error {
+  border-color: rgba(217, 83, 79, 0.55);
+  background: rgba(81, 34, 36, 0.92);
 }
 
 @media (max-width: 1200px) {

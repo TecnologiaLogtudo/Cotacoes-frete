@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 
 const API_BASE = import.meta.env.BASE_URL
@@ -53,6 +53,8 @@ export default function Observabilidade() {
   const [browserJobId, setBrowserJobId] = useState('')
   const [loading, setLoading] = useState({})
   const [toasts, setToasts] = useState([])
+  const [copiedJobId, setCopiedJobId] = useState('')
+  const copyResetTimerRef = useRef(null)
 
   function showToast(message, type = 'info') {
     const id = `${Date.now()}-${Math.random()}`
@@ -64,6 +66,50 @@ export default function Observabilidade() {
 
   function setBusy(key, value) {
     setLoading((prev) => ({ ...prev, [key]: value }))
+  }
+
+  async function copyToClipboard(text) {
+    if (!text) return false
+
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text)
+      return true
+    }
+
+    const textarea = document.createElement('textarea')
+    textarea.value = text
+    textarea.setAttribute('readonly', 'true')
+    textarea.style.position = 'absolute'
+    textarea.style.left = '-9999px'
+    document.body.appendChild(textarea)
+    textarea.select()
+    const copied = document.execCommand('copy')
+    document.body.removeChild(textarea)
+    return copied
+  }
+
+  async function handleCopyJobId(job) {
+    const fullId = job?.id || ''
+    const shortId = job?.shortId || fullId
+    if (!fullId) {
+      showToast('ID invalido para copia', 'error')
+      return
+    }
+
+    try {
+      const copied = await copyToClipboard(fullId)
+      if (!copied) throw new Error('copy-failed')
+      setCopiedJobId(fullId)
+      showToast(`ID ${shortId} copiado`, 'success')
+      if (copyResetTimerRef.current) {
+        window.clearTimeout(copyResetTimerRef.current)
+      }
+      copyResetTimerRef.current = window.setTimeout(() => {
+        setCopiedJobId('')
+      }, 1800)
+    } catch {
+      showToast('Nao foi possivel copiar o ID', 'error')
+    }
   }
 
   const shortIdFromFullId = (fullId) => jobMetaByFullId.get(fullId)?.shortId || fullId || ''
@@ -251,6 +297,22 @@ export default function Observabilidade() {
     }
   }
 
+  async function handleTabLoad(inputValue, busyKey, label) {
+    const id = resolveJobId(inputValue) || selectedJobId
+    if (!id) {
+      showToast('Selecione um job para carregar os dados', 'error')
+      return
+    }
+
+    setBusy(busyKey, true)
+    try {
+      await selectJob(id)
+      showToast(`${label} carregado(s)`, 'success')
+    } finally {
+      setBusy(busyKey, false)
+    }
+  }
+
   useEffect(() => {
     loadSummary()
     loadJobs()
@@ -261,6 +323,10 @@ export default function Observabilidade() {
     loadCurrentTabData(selectedJobId, activeTab)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab])
+
+  useEffect(() => () => {
+    if (copyResetTimerRef.current) window.clearTimeout(copyResetTimerRef.current)
+  }, [])
 
   return (
     <div className="observability-page">
@@ -294,8 +360,12 @@ export default function Observabilidade() {
               <div className="admin-subtitle">Monitoramento e auditoria das automacoes</div>
             </div>
             <div className="admin-actions">
-              <button className="btn subtle" disabled={!!loading.reset} onClick={handleResetLogs}>Limpar Log</button>
-              <button className="btn ghost" disabled={!!loading.refresh} onClick={handleRefresh}>Atualizar</button>
+              <button className="btn subtle" disabled={!!loading.reset} onClick={handleResetLogs}>
+                {loading.reset ? 'Limpando...' : 'Limpar Log'}
+              </button>
+              <button className="btn ghost" disabled={!!loading.refresh} onClick={handleRefresh}>
+                {loading.refresh ? 'Atualizando...' : 'Atualizar'}
+              </button>
             </div>
           </header>
 
@@ -310,6 +380,9 @@ export default function Observabilidade() {
 
               <div className="panel-header mt-16">
                 <h2>Jobs / Sessoes</h2>
+                <div className="selected-job-feedback">
+                  Job selecionado: <strong>{shortIdFromFullId(selectedJobId) || '-'}</strong>
+                </div>
                 <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
                   <option value="">Todos</option>
                   <option value="running">Running</option>
@@ -335,7 +408,20 @@ export default function Observabilidade() {
                     {jobs.length === 0 && <tr><td colSpan="6" className="table-empty">Nenhum job encontrado para o filtro atual.</td></tr>}
                     {jobs.map((j) => (
                       <tr key={j.id} className={`jobs-row ${selectedJobId === j.id ? 'active' : ''}`} onClick={() => selectJob(j.id)}>
-                        <td>{j.shortId || j.id}</td>
+                        <td>
+                          <button
+                            type="button"
+                            className={`copy-id-btn ${copiedJobId === j.id ? 'copied' : ''}`}
+                            title="Clique para copiar o ID completo"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleCopyJobId(j)
+                            }}
+                          >
+                            <span className="copy-id-text">{j.shortId || j.id}</span>
+                            <span className="copy-id-hint">{copiedJobId === j.id ? 'Copiado' : 'Copiar'}</span>
+                          </button>
+                        </td>
                         <td>{j.status}</td>
                         <td>{j.username || '-'}</td>
                         <td>{j.ip || '-'}</td>
@@ -354,7 +440,9 @@ export default function Observabilidade() {
               <div className="panel-header">
                 <h2>Acoes Criticas</h2>
                 <input type="text" value={actionsJobId} onChange={(e) => setActionsJobId(e.target.value)} placeholder="Job ID" />
-                <button className="btn" onClick={async () => { const id = resolveJobId(actionsJobId) || selectedJobId; await selectJob(id); await loadActions(id) }}>Carregar</button>
+                <button className="btn" disabled={!!loading.actions} onClick={() => handleTabLoad(actionsJobId, 'actions', 'Acoes')}>
+                  {loading.actions ? 'Carregando...' : 'Carregar'}
+                </button>
               </div>
               <div className="table-wrap">
                 <table>
@@ -373,7 +461,9 @@ export default function Observabilidade() {
               <div className="panel-header">
                 <h2>Passos e Acoes</h2>
                 <input type="text" value={stepsJobId} onChange={(e) => setStepsJobId(e.target.value)} placeholder="Job ID" />
-                <button className="btn" onClick={async () => { const id = resolveJobId(stepsJobId) || selectedJobId; await selectJob(id); await loadSteps(id) }}>Carregar</button>
+                <button className="btn" disabled={!!loading.steps} onClick={() => handleTabLoad(stepsJobId, 'steps', 'Passos')}>
+                  {loading.steps ? 'Carregando...' : 'Carregar'}
+                </button>
               </div>
               <div className="table-wrap">
                 <table>
@@ -392,7 +482,9 @@ export default function Observabilidade() {
               <div className="panel-header">
                 <h2>Artefatos (Video)</h2>
                 <input type="text" value={artifactsJobId} onChange={(e) => setArtifactsJobId(e.target.value)} placeholder="Job ID" />
-                <button className="btn" onClick={async () => { const id = resolveJobId(artifactsJobId) || selectedJobId; await selectJob(id); await loadArtifacts(id) }}>Carregar</button>
+                <button className="btn" disabled={!!loading.artifacts} onClick={() => handleTabLoad(artifactsJobId, 'artifacts', 'Artefatos')}>
+                  {loading.artifacts ? 'Carregando...' : 'Carregar'}
+                </button>
               </div>
 
               {!artifactVideo && <div className="table-empty">Nenhum video encontrado para este job.</div>}
@@ -413,7 +505,9 @@ export default function Observabilidade() {
               <div className="panel-header">
                 <h2>Logs do Browser</h2>
                 <input type="text" value={browserJobId} onChange={(e) => setBrowserJobId(e.target.value)} placeholder="Job ID" />
-                <button className="btn" onClick={async () => { const id = resolveJobId(browserJobId) || selectedJobId; await selectJob(id); await loadBrowser(id) }}>Carregar</button>
+                <button className="btn" disabled={!!loading.browser} onClick={() => handleTabLoad(browserJobId, 'browser', 'Logs do browser')}>
+                  {loading.browser ? 'Carregando...' : 'Carregar'}
+                </button>
               </div>
               <div className="table-wrap">
                 <table>
