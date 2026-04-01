@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import logging
 import time
-import uuid
 from pathlib import Path
 
 from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
@@ -16,6 +15,7 @@ from automacao.observabilidade import (
     artifacts_for_job,
     browser_logs_for_job,
     list_jobs,
+    next_job_id,
     register_job_enqueued,
     register_job_ip,
     reset_logs,
@@ -67,7 +67,7 @@ async def create_cotacao_job(
     if suffix != ".xlsx":
         raise HTTPException(status_code=400, detail="Apenas arquivos .xlsx são permitidos.")
 
-    job_id = uuid.uuid4().hex
+    job_id = next_job_id()
     safe_name = Path(planilha.filename).name
     target = uploads_dir() / f"{job_id}_{safe_name}"
     bytes_written = 0

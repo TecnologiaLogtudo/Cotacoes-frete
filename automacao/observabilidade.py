@@ -22,7 +22,6 @@ from rq.registry import (
 )
 
 from automacao.job_io import jobs_dir, task_log_path, uploads_dir
-from automacao.queue import get_queue, get_redis_connection
 
 
 VIDEO_EXTENSIONS = {".webm", ".mp4", ".mov", ".mkv"}
@@ -167,6 +166,13 @@ def _ensure_schema() -> None:
         )
         """,
         "CREATE INDEX IF NOT EXISTS idx_artifacts_task_created ON artifacts(task_id, created_at)",
+        """
+        CREATE TABLE IF NOT EXISTS job_id_sequence (
+            date_key TEXT PRIMARY KEY,
+            last_seq INTEGER NOT NULL,
+            updated_at TEXT NOT NULL
+        )
+        """,
     ]
 
     try:
@@ -476,6 +482,43 @@ def _parse_log_lines(task_id: str) -> list[ParsedLogLine]:
     return out
 
 
+def _queue_handles():
+    # Import tardio para evitar ciclo: observabilidade -> queue -> tasks -> observabilidade
+    from automacao.queue import get_queue, get_redis_connection
+
+    return get_queue(), get_redis_connection()
+
+
+def next_job_id() -> str:
+    _ensure_schema()
+    date_key = datetime.now().strftime("%d%m%Y")
+    now = _now_iso()
+
+    try:
+        with _db_connect() as conn:
+            conn.execute("BEGIN IMMEDIATE")
+            row = conn.execute(
+                "SELECT last_seq FROM job_id_sequence WHERE date_key = ?",
+                (date_key,),
+            ).fetchone()
+            next_seq = (int(row["last_seq"]) + 1) if row else 1
+            conn.execute(
+                """
+                INSERT INTO job_id_sequence (date_key, last_seq, updated_at)
+                VALUES (?, ?, ?)
+                ON CONFLICT(date_key) DO UPDATE SET
+                    last_seq=excluded.last_seq,
+                    updated_at=excluded.updated_at
+                """,
+                (date_key, next_seq, now),
+            )
+            conn.commit()
+        return f"{date_key}-{next_seq:04d}"
+    except Exception:
+        logger.exception("Falha ao gerar job_id sequencial")
+        return f"{date_key}-0000"
+
+
 def _collect_known_task_ids() -> list[str]:
     task_ids: set[str] = set()
 
@@ -491,8 +534,7 @@ def _collect_known_task_ids() -> list[str]:
     for file in jobs_dir().glob("*.log"):
         task_ids.add(file.stem)
 
-    queue = get_queue()
-    connection = get_redis_connection()
+    queue, connection = _queue_handles()
     registries = [
         queue,
         StartedJobRegistry(queue=queue),
@@ -546,7 +588,8 @@ def _build_job_item(task_id: str) -> dict[str, Any]:
         logger.exception("Falha ao carregar job do SQLite | task_id=%s", task_id)
 
     try:
-        job = Job.fetch(task_id, connection=get_redis_connection())
+        _, connection = _queue_handles()
+        job = Job.fetch(task_id, connection=connection)
     except NoSuchJobError:
         job = None
 
@@ -992,8 +1035,7 @@ def reset_logs(password: str) -> None:
                     pass
 
     # remove metadados de jobs do RQ para limpar histórico
-    connection = get_redis_connection()
-    queue = get_queue()
+    queue, connection = _queue_handles()
     registries = [
         queue,
         StartedJobRegistry(queue=queue),
