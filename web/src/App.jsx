@@ -1,5 +1,6 @@
 import React from 'react'
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
 
 const LS_KEYS = {
   usuario: 'logtudo_usuario',
@@ -196,7 +197,8 @@ export default function App() {
         <nav className="nav">
           <button type="button" className={`nav-btn ${activeView === 'processamento' ? 'active' : ''}`} onClick={() => setActiveView('processamento')}>Processamento</button>
           <button type="button" className={`nav-btn ${activeView === 'logs' ? 'active' : ''}`} onClick={() => setActiveView('logs')}>Logs</button>
-          <a className="nav-btn nav-link" href="/cotacoes/manual-de-uso" target="_blank" rel="noreferrer">Manual</a>
+          <Link className="nav-btn nav-link" to="/observabilidade">Observabilidade</Link>
+          <a className="nav-btn nav-link" href={`${API_BASE}manual-de-uso`} target="_blank" rel="noreferrer">Manual</a>
         </nav>
 
         <div className="sidebar-footer">

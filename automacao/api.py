@@ -5,10 +5,21 @@ import time
 import uuid
 from pathlib import Path
 
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse, JSONResponse
+from pydantic import BaseModel
 
 from automacao.job_io import parse_progress_from_log, read_log_incremental, uploads_dir
+from automacao.observabilidade import (
+    actions_for_job,
+    artifact_file_path,
+    artifacts_for_job,
+    browser_logs_for_job,
+    list_jobs,
+    reset_logs,
+    steps_for_job,
+    summary,
+)
 from automacao.queue import enqueue_cotacao_job, fetch_job, serialize_job_result
 
 
@@ -19,6 +30,10 @@ WEB_DIST = Path(__file__).resolve().parent.parent / "web_dist"
 MANUAL_HTML = Path(__file__).resolve().parent / "manual_de_uso.html"
 UPLOAD_CHUNK_SIZE = 1024 * 1024  # 1 MB
 MAX_XLSX_SIZE_BYTES = 20 * 1024 * 1024  # 20 MB
+
+
+class ResetLogsPayload(BaseModel):
+    password: str
 
 
 @app.get("/health")
@@ -35,6 +50,7 @@ def manual_de_uso() -> FileResponse:
 
 @app.post("/api/jobs/cotacoes")
 async def create_cotacao_job(
+    request: Request,
     usuario: str = Form(...),
     senha: str = Form(...),
     data_referencia: str = Form(...),
@@ -100,6 +116,11 @@ async def create_cotacao_job(
         max_rows_to_scan=100,
         job_id=job_id,
     )
+    try:
+        task.meta["client_ip"] = request.client.host if request.client else None
+        task.save_meta()
+    except Exception:
+        logger.warning("Nao foi possivel salvar metadado de IP no job %s", task.id)
 
     logger.info(
         "Job enfileirado | job_id=%s | task_id=%s | arquivo=%s | bytes=%d",
@@ -147,6 +168,56 @@ def get_job_logs(task_id: str, cursor: int = 0) -> dict:
         "next_cursor": next_cursor,
         "lines": lines,
     }
+
+
+@app.get("/api/admin/summary")
+def get_admin_summary() -> dict:
+    return summary()
+
+
+@app.get("/api/admin/jobs")
+def get_admin_jobs(status: str | None = None) -> dict:
+    return {"items": list_jobs(status=status)}
+
+
+@app.get("/api/admin/jobs/{job_id}/actions")
+def get_admin_job_actions(job_id: str) -> dict:
+    return {"items": actions_for_job(job_id)}
+
+
+@app.get("/api/admin/jobs/{job_id}/steps")
+def get_admin_job_steps(job_id: str) -> dict:
+    return {"items": steps_for_job(job_id)}
+
+
+@app.get("/api/admin/jobs/{job_id}/artifacts")
+def get_admin_job_artifacts(job_id: str) -> dict:
+    return {"items": artifacts_for_job(job_id)}
+
+
+@app.get("/api/admin/jobs/{job_id}/browser-logs")
+def get_admin_job_browser_logs(job_id: str) -> dict:
+    return {"items": browser_logs_for_job(job_id)}
+
+
+@app.get("/api/admin/artifacts/{artifact_id}/file")
+def get_admin_artifact_file(artifact_id: str) -> FileResponse:
+    file_path = artifact_file_path(artifact_id)
+    if not file_path or not file_path.exists():
+        raise HTTPException(status_code=404, detail="Arquivo de artefato não encontrado.")
+    return FileResponse(file_path)
+
+
+@app.post("/api/admin/reset-logs")
+def post_admin_reset_logs(payload: ResetLogsPayload) -> dict:
+    try:
+        reset_logs(payload.password)
+    except PermissionError as exc:
+        raise HTTPException(status_code=401, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
+
+    return {"ok": True}
 
 
 @app.get("/", include_in_schema=False, response_model=None)
