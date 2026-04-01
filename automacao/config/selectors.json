@@ -21,6 +21,7 @@
     "campo_numero_pedido_cliente": "input[name='dados_nroPedidoCliente']",
     "campo_validade": "input[name='dados_dtFinal']",
     "select_categoria_veiculo": "select[name='dados_categoriaVeiculo_id']",
+    "botao_pesquisar_categoria_veiculo": "i[name='botaoPesquisa_categoriaVeiculo_id']",
     "campo_pesquisa_remetente": "input[name='pesquisa_enderecoRemetente_id']",
     "botao_pesquisar_remetente": "i[name='botaoPesquisa_enderecoRemetente_id']",
     "select_remetente": "select[name='dados_enderecoRemetente_id']",
@@ -28,6 +29,7 @@
     "campo_uf_fim": "input[name='dados_UFFim']",
     "select_cidade_ini": "select[name='dados_cMunIni']",
     "campo_pesquisa_cidade_fim": "input[name='pesquisa_cMunFim']",
+    "botao_pesquisar_cidade_fim": "i[name='botaoPesquisa_cMunFim']",
     "campo_obs_interna": "textarea[name='dados_obsInterna']",
     "botao_cadastrar": "input#botao_cadastrar[name='botao_finalizacao'][value='Cadastrar']"
   },

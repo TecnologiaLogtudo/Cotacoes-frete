@@ -31,6 +31,7 @@ SEL_NUMERO = MAPPINGS["selectors"]["campo_numero"]
 SEL_NUMERO_PEDIDO_CLIENTE = MAPPINGS["selectors"]["campo_numero_pedido_cliente"]
 SEL_VALIDADE = MAPPINGS["selectors"]["campo_validade"]
 SEL_CATEGORIA_VEICULO = MAPPINGS["selectors"]["select_categoria_veiculo"]
+SEL_BTN_PESQ_CATEGORIA_VEICULO = MAPPINGS["selectors"]["botao_pesquisar_categoria_veiculo"]
 SEL_PESQ_REMETENTE = MAPPINGS["selectors"]["campo_pesquisa_remetente"]
 SEL_BTN_PESQ_REMETENTE = MAPPINGS["selectors"]["botao_pesquisar_remetente"]
 SEL_REMETENTE = MAPPINGS["selectors"]["select_remetente"]
@@ -38,6 +39,7 @@ SEL_UF_INI = MAPPINGS["selectors"]["campo_uf_ini"]
 SEL_UF_FIM = MAPPINGS["selectors"]["campo_uf_fim"]
 SEL_CIDADE_INI = MAPPINGS["selectors"]["select_cidade_ini"]
 SEL_PESQ_CIDADE_FIM = MAPPINGS["selectors"]["campo_pesquisa_cidade_fim"]
+SEL_BTN_PESQ_CIDADE_FIM = MAPPINGS["selectors"]["botao_pesquisar_cidade_fim"]
 SEL_OBS_INTERNA = MAPPINGS["selectors"]["campo_obs_interna"]
 SEL_BOTAO_CADASTRAR = MAPPINGS["selectors"]["botao_cadastrar"]
 
@@ -107,7 +109,49 @@ def acessar_url_cotacoes_e_aguardar(page) -> None:
 def marcar_pagamento_frete(page) -> None:
     seletor_radio = f"{SEL_RADIO_PAGAMENTO_FRETE}[value='{OPT_PAGAMENTO_FRETE_RADIO_VALUE}']"
     print(f"Marcando radio de Frete com value '{OPT_PAGAMENTO_FRETE_RADIO_VALUE}'...")
-    page.locator(seletor_radio).check()
+    radio = page.locator(seletor_radio).first
+    radio.wait_for(state="attached", timeout=5000)
+
+    try:
+        radio.check(timeout=2000)
+        return
+    except PlaywrightTimeoutError:
+        print("Radio de frete nao ficou visivel para check(); tentando fallback label/JS...")
+
+    resultado = page.evaluate(
+        """({ selector }) => {
+            const input = document.querySelector(selector);
+            if (!input) return { ok: false, motivo: "input_nao_encontrado" };
+
+            const disparar = (nomeEvento) => {
+                input.dispatchEvent(new Event(nomeEvento, { bubbles: true }));
+            };
+
+            if (input.id) {
+                const label = document.querySelector(`label[for="${input.id}"]`);
+                if (label) {
+                    const estilo = window.getComputedStyle(label);
+                    const visivel = label.getClientRects().length > 0
+                        && estilo.display !== "none"
+                        && estilo.visibility !== "hidden";
+                    if (visivel) {
+                        label.click();
+                        if (input.checked) return { ok: true, modo: "label" };
+                    }
+                }
+            }
+
+            input.checked = true;
+            disparar("input");
+            disparar("change");
+            disparar("click");
+            return { ok: !!input.checked, modo: "js" };
+        }""",
+        {"selector": seletor_radio},
+    )
+    if not resultado.get("ok"):
+        raise ValueError(f"Nao foi possivel marcar pagamento de frete em '{seletor_radio}'")
+    print(f"Pagamento de frete marcado com fallback: {resultado.get('modo', 'desconhecido')}")
 
 
 def selecionar_regra_frete_e_sugerir_tabela(page) -> None:
@@ -125,7 +169,7 @@ def preencher_frete_negociado(page, frete_negociado: str, data_referencia: str) 
 
 
 def preencher_obs_interna(page, nome_motorista: str, placa: str, data_referencia: str) -> None:
-    texto_obs = f"Motorista: {nome_motorista} | Placa: {placa} | Data: {data_referencia}"
+    texto_obs = f"{nome_motorista} | {placa} | {data_referencia}"
     print(f"Preenchendo campo Interna: {texto_obs}")
     page.locator(SEL_OBS_INTERNA).fill(texto_obs)
 
@@ -148,6 +192,17 @@ def copiar_uf_e_cidade_origem_para_destino(page) -> None:
 
     print(f"Copiando cidade inicial para pesquisa de cidade final: {cidade_ini}")
     page.locator(SEL_PESQ_CIDADE_FIM).fill(cidade_ini)
+    print("Clicando em Pesquisar (Cidade final)...")
+    page.locator(SEL_BTN_PESQ_CIDADE_FIM).click()
+    page.wait_for_timeout(1000)
+
+
+def selecionar_categoria_veiculo_por_perfil(page, perfil: str) -> None:
+    print("Clicando em Pesquisar (Categoria Veículo)...")
+    page.locator(SEL_BTN_PESQ_CATEGORIA_VEICULO).click()
+    page.wait_for_timeout(1000)
+    print(f"Selecionando Cat. Veículo com valor da coluna 'Perfil': {perfil}")
+    page.locator(SEL_CATEGORIA_VEICULO).select_option(label=perfil)
 
 
 def selecionar_remetente_por_base(page, base: str) -> None:
@@ -204,16 +259,12 @@ def preencher_formulario_linha(page, linha: LinhaAutomacao, validade: str, data_
     print("Clicando em Adicionar...")
     page.locator(SEL_ADICIONAR).first.click()
 
-    marcar_pagamento_frete(page)
-
     print("Selecionando Agência: LOGTUDO MATRIZ - BAHIA...")
     page.locator(SEL_AGENCIA).wait_for(state="visible")
     page.locator(SEL_AGENCIA).select_option(label=OPT_AGENCIA_MATRIZ_BAHIA)
 
     print("Selecionando Status: Aprovado Cliente...")
     page.locator(SEL_STATUS).select_option(label=OPT_STATUS_APROVADO_CLIENTE)
-
-    selecionar_regra_frete_e_sugerir_tabela(page)
 
     print("Digitando Operação: Carga fechada...")
     page.locator(SEL_OPERACAO).fill(OPT_OPERACAO_CARGA_FECHADA)
@@ -223,15 +274,11 @@ def preencher_formulario_linha(page, linha: LinhaAutomacao, validade: str, data_
     page.locator(SEL_PESQUISAR_OPERACAO).click()
     page.wait_for_timeout(1000)
 
+    selecionar_categoria_veiculo_por_perfil(page, perfil=linha.perfil)
+
     km_aleatorio = random.randint(50, 100)
     print(f"Preenchendo Km com valor aleatório: {km_aleatorio}")
     page.locator(SEL_KM).fill(str(km_aleatorio))
-
-    selecionar_remetente_por_base(page, base=linha.base)
-    copiar_uf_e_cidade_origem_para_destino(page)
-
-    print(f"Selecionando Cat. Veículo com valor da coluna 'Perfil': {linha.perfil}")
-    page.locator(SEL_CATEGORIA_VEICULO).select_option(label=linha.perfil)
 
     print(f"Preenchendo Nº com valor da coluna 'Número': {linha.numero}")
     page.locator(SEL_NUMERO).fill(linha.numero)
@@ -241,6 +288,11 @@ def preencher_formulario_linha(page, linha: LinhaAutomacao, validade: str, data_
 
     print(f"Preenchendo Validade com valor informado pelo usuário: {validade}")
     page.locator(SEL_VALIDADE).fill(validade)
+
+    marcar_pagamento_frete(page)
+    selecionar_remetente_por_base(page, base=linha.base)
+    copiar_uf_e_cidade_origem_para_destino(page)
+    selecionar_regra_frete_e_sugerir_tabela(page)
 
     preencher_frete_negociado(page, frete_negociado=linha.frete_negociado, data_referencia=data_referencia)
     preencher_obs_interna(
@@ -382,7 +434,6 @@ if __name__ == "__main__":
             nome_motorista=nome_motorista,
             placa=placa,
         )
-
 
 
 
