@@ -18,6 +18,7 @@ class LinhaAutomacao:
     placa: str
     perfil: str
     base: str
+    operacao: str
     frete_negociado: str
     excel_row: int
 
@@ -203,6 +204,7 @@ def carregar_linhas_para_automacao(
         col_placa = headers.get(_normalizar("Placa"), 2)
         col_perfil = headers.get(_normalizar("Perfil"))
         col_base = headers.get(_normalizar("Base"))
+        col_operacao = headers.get(_normalizar("Operação")) or headers.get(_normalizar("Operacao"))
 
         if not col_perfil:
             raise ValueError("Cabecalho 'Perfil' nao encontrado na linha 3.")
@@ -226,6 +228,7 @@ def carregar_linhas_para_automacao(
             placa = _texto_celula(values[col_placa - 1] if len(values) >= col_placa else "")
             perfil = _texto_celula(values[col_perfil - 1] if len(values) >= col_perfil else "")
             base = _texto_celula(values[col_base - 1] if len(values) >= col_base else "")
+            operacao = _texto_celula(values[col_operacao - 1] if col_operacao and len(values) >= col_operacao else "")
             frete = _formatar_moeda(values[col_data - 1] if len(values) >= col_data else "")
 
             linhas.append(
@@ -235,6 +238,7 @@ def carregar_linhas_para_automacao(
                     placa=placa,
                     perfil=perfil,
                     base=base,
+                    operacao=operacao,
                     frete_negociado=frete,
                     excel_row=idx,
                 )

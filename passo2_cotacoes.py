@@ -27,6 +27,7 @@ if __name__ == "__main__":
         frete_negociado = os.getenv("LOGTUDO_FRETE_NEGOCIADO")
         nome_motorista = os.getenv("LOGTUDO_NOME_MOTORISTA")
         placa = os.getenv("LOGTUDO_PLACA")
+        operacao = os.getenv("LOGTUDO_OPERACAO", "")
 
         if not all(
             [numero, validade, perfil, base, frete_negociado, data_referencia, nome_motorista, placa]
@@ -47,4 +48,5 @@ if __name__ == "__main__":
             data_referencia=data_referencia,
             nome_motorista=nome_motorista,
             placa=placa,
+            operacao=operacao,
         )

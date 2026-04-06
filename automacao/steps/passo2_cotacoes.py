@@ -1,5 +1,6 @@
 import os
 import random
+import re
 import unicodedata
 from datetime import datetime
 from pathlib import Path
@@ -81,6 +82,44 @@ def normalizar_texto(texto: str) -> str:
     return sem_acentos.upper().strip()
 
 
+def calcular_data_pagamento(operacao: str, validade: str, data_referencia_original: str) -> str:
+    m = re.search(r"(\d{1,2})\/\-(?:\/\-)?", validade)
+    if not m:
+        return data_referencia_original
+
+    dia = int(m.group(1))
+    mes = int(m.group(2))
+    ano = m.group(3)
+    ano_int = int(ano) if ano else datetime.now().year
+    if ano and len(ano) == 2:
+        ano_int += 2000
+
+    op_norm = operacao.strip().upper()
+
+    if op_norm == "FIXO":
+        dia_calc = 20
+        mes_calc = mes + 1
+    elif op_norm == "SPOT":
+        if dia <= 15:
+            dia_calc = 25
+            mes_calc = mes
+        else:
+            dia_calc = 10
+            mes_calc = mes + 1
+    else:
+        return data_referencia_original
+
+    ano_calc = ano_int
+    if mes_calc > 12:
+        mes_calc = 1
+        ano_calc += 1
+
+    if ano:
+        ano_str = str(ano_calc) if len(ano) == 4 else str(ano_calc)[-2:]
+        return f"{dia_calc:02d}/{mes_calc:02d}/{ano_str}"
+    return f"{dia_calc:02d}/{mes_calc:02d}"
+
+
 def realizar_login_na_sessao(page, usuario: str, senha: str) -> None:
     print("Acessando a tela de login...")
     page.goto(URL_LOGIN, wait_until="domcontentloaded")
@@ -92,8 +131,8 @@ def realizar_login_na_sessao(page, usuario: str, senha: str) -> None:
 
     print("Enviando formulário de login...")
     page.locator(SEL_ENTRAR).click()
-    print("Aguardando 20s apos clicar em Entrar...")
-    page.wait_for_timeout(20000)
+    print("Aguardando 10s apos clicar em Entrar...")
+    page.wait_for_timeout(10000)
     aguardar_renderizacao_total(page, contexto="pos-login")
     print("Login concluído com sucesso!")
 
@@ -102,8 +141,8 @@ def acessar_url_cotacoes_e_aguardar(page) -> None:
     print(f"Acessando a URL de cotacoes de frete: {URL_PASSO_2}")
     page.goto(URL_PASSO_2, wait_until="domcontentloaded")
     aguardar_renderizacao_total(page, contexto="tela de cotacoes de frete")
-    print("Aguardando 10s antes de procurar o botao Adicionar...")
-    page.wait_for_timeout(10000)
+    print("Aguardando 4s antes de procurar o botao Adicionar...")
+    page.wait_for_timeout(4000)
     page.locator(SEL_ADICIONAR).first.wait_for(state="visible")
 
 def marcar_pagamento_frete(page) -> None:
@@ -295,11 +334,13 @@ def preencher_formulario_linha(page, linha: LinhaAutomacao, validade: str, data_
     selecionar_regra_frete_e_sugerir_tabela(page)
 
     preencher_frete_negociado(page, frete_negociado=linha.frete_negociado, data_referencia=data_referencia)
+    
+    data_obs = calcular_data_pagamento(linha.operacao, validade, data_referencia)
     preencher_obs_interna(
         page,
         nome_motorista=linha.nome_motorista,
         placa=linha.placa,
-        data_referencia=data_referencia,
+        data_referencia=data_obs,
     )
 
     clicar_cadastrar_e_aguardar(page)
@@ -370,6 +411,7 @@ def executar_passo_2(
     data_referencia: str,
     nome_motorista: str,
     placa: str,
+    operacao: str = "",
     artifacts_path: str | None = None,
 ) -> None:
     linha = LinhaAutomacao(
@@ -378,6 +420,7 @@ def executar_passo_2(
         placa=placa,
         perfil=perfil,
         base=base,
+        operacao=operacao,
         frete_negociado=frete_negociado,
         excel_row=0,
     )
@@ -413,6 +456,7 @@ if __name__ == "__main__":
         frete_negociado = os.getenv("LOGTUDO_FRETE_NEGOCIADO")
         nome_motorista = os.getenv("LOGTUDO_NOME_MOTORISTA")
         placa = os.getenv("LOGTUDO_PLACA")
+        operacao_env = os.getenv("LOGTUDO_OPERACAO", "")
 
         if not all(
             [numero, validade, perfil, base, frete_negociado, data_referencia, nome_motorista, placa]
@@ -433,8 +477,5 @@ if __name__ == "__main__":
             data_referencia=data_referencia,
             nome_motorista=nome_motorista,
             placa=placa,
+            operacao=operacao_env,
         )
-
-
-
-
