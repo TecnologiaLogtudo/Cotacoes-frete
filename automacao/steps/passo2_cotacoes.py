@@ -83,7 +83,7 @@ def normalizar_texto(texto: str) -> str:
 
 
 def calcular_data_pagamento(operacao: str, validade: str, data_referencia_original: str) -> str:
-    m = re.search(r"(\d{1,2})\/\-(?:\/\-)?", validade)
+    m = re.search(r"(\d{1,2})[-/](\d{1,2})(?:[-/](\d{2,4}))?", validade)
     if not m:
         return data_referencia_original
 
