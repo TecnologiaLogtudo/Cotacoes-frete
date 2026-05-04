@@ -82,6 +82,20 @@ def normalizar_texto(texto: str) -> str:
     return sem_acentos.upper().strip()
 
 
+def _remetente_label_matches_base(label: str, base: str) -> bool:
+    label_norm = normalizar_texto(label)
+    base_norm = normalizar_texto(base)
+
+    if f" - {base_norm} - " in label_norm:
+        return True
+
+    if re.search(rf"(?:^| - ){re.escape(base_norm)}(?: - |$)", label_norm):
+        return True
+
+    tokens = re.split(r"\s*[-–—/]\s*", label_norm)
+    return any(token == base_norm for token in tokens)
+
+
 def calcular_data_pagamento(operacao: str, validade: str, data_referencia_original: str) -> str:
     m = re.search(r"(\d{1,2})[-/](\d{1,2})(?:[-/](\d{2,4}))?", validade)
     if not m:
@@ -257,13 +271,12 @@ def selecionar_remetente_por_base(page, base: str) -> None:
         "els => els.map(el => ({ value: el.value, label: (el.textContent || '').trim() }))",
     )
 
-    base_norm = normalizar_texto(base)
-    marcador_cidade = f" - {base_norm} - "
-
     opcao_encontrada = None
     for opcao in opcoes:
-        label_norm = normalizar_texto(opcao["label"])
-        if marcador_cidade in label_norm and opcao["value"]:
+        if not opcao["value"]:
+            continue
+
+        if _remetente_label_matches_base(opcao["label"], base):
             opcao_encontrada = opcao
             break
 
