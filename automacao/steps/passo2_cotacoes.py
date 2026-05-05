@@ -96,7 +96,7 @@ def _remetente_label_matches_base(label: str, base: str) -> bool:
     return any(token == base_norm for token in tokens)
 
 
-def calcular_data_pagamento(operacao: str, validade: str, data_referencia_original: str) -> str:
+def calcular_data_pagamento(operacao: str, validade: str, data_referencia_original: str, is_nilo: bool = False) -> str:
     m = re.search(r"(\d{1,2})[-/](\d{1,2})(?:[-/](\d{2,4}))?", validade)
     if not m:
         return data_referencia_original
@@ -110,7 +110,10 @@ def calcular_data_pagamento(operacao: str, validade: str, data_referencia_origin
 
     op_norm = operacao.strip().upper()
 
-    if op_norm == "FIXO":
+    if is_nilo:
+        dia_calc = 25
+        mes_calc = mes + 1
+    elif op_norm == "FIXO":
         dia_calc = 20
         mes_calc = mes + 1
     elif op_norm == "SPOT":
@@ -305,7 +308,7 @@ def clicar_cadastrar_e_aguardar(page) -> None:
     aguardar_renderizacao_total(page, contexto="apos-cadastrar")
 
 
-def preencher_formulario_linha(page, linha: LinhaAutomacao, validade: str, data_referencia: str) -> None:
+def preencher_formulario_linha(page, linha: LinhaAutomacao, validade: str, data_referencia: str, is_nilo: bool = False) -> None:
     acessar_url_cotacoes_e_aguardar(page)
 
     print("Clicando em Adicionar...")
@@ -348,7 +351,7 @@ def preencher_formulario_linha(page, linha: LinhaAutomacao, validade: str, data_
 
     preencher_frete_negociado(page, frete_negociado=linha.frete_negociado, data_referencia=data_referencia)
     
-    data_obs = calcular_data_pagamento(linha.operacao, validade, data_referencia)
+    data_obs = calcular_data_pagamento(linha.operacao, validade, data_referencia, is_nilo)
     preencher_obs_interna(
         page,
         nome_motorista=linha.nome_motorista,
@@ -383,6 +386,10 @@ def executar_passo_2_lote(
 
     print(f"Total de linhas elegíveis para automação: {len(linhas)}")
 
+    is_nilo = "nilo" in Path(planilha_path).name.lower()
+    if is_nilo:
+        print("Modo NILO detectado pelo nome do arquivo. A data de pagamento será fixada no dia 25 do mês seguinte.")
+
     config = PlaywrightVPSConfig(headless=True, record_video_dir=artifacts_path)
     with PlaywrightVPSClient(config) as client:
         page = client.page
@@ -398,6 +405,7 @@ def executar_passo_2_lote(
                     linha=linha,
                     validade=validade,
                     data_referencia=data_referencia,
+                    is_nilo=is_nilo,
                 )
         except Exception as exc:
             screenshot_path = None
