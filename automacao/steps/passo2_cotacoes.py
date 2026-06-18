@@ -154,13 +154,34 @@ def realizar_login_na_sessao(page, usuario: str, senha: str) -> None:
     print("Login concluído com sucesso!")
 
 
-def acessar_url_cotacoes_e_aguardar(page) -> None:
+def acessar_url_cotacoes_e_aguardar(page, usuario: str | None = None, senha: str | None = None) -> None:
     print(f"Acessando a URL de cotacoes de frete: {URL_PASSO_2}")
     page.goto(URL_PASSO_2, wait_until="domcontentloaded")
     aguardar_renderizacao_total(page, contexto="tela de cotacoes de frete")
     print("Aguardando 4s antes de procurar o botao Adicionar...")
     page.wait_for_timeout(4000)
-    page.locator(SEL_ADICIONAR).first.wait_for(state="visible")
+    
+    try:
+        # Tenta verificar se o botão Adicionar está visível em até 5 segundos
+        page.locator(SEL_ADICIONAR).first.wait_for(state="visible", timeout=5000)
+    except PlaywrightTimeoutError:
+        print("Botao Adicionar nao ficou visivel em 5s. Verificando se a sessao expirou...")
+        
+        # Identifica se a página atual é de login por URL ou pela visibilidade do campo de usuário
+        is_login_page = "login" in page.url.lower() or page.locator(SEL_USUARIO).is_visible()
+        
+        if is_login_page and usuario and senha:
+            print("Sessao expirada ou redirecionado para a tela de login. Realizando re-login automatico...")
+            realizar_login_na_sessao(page, usuario=usuario, senha=senha)
+            print(f"Re-acessando a URL de cotacoes de frete: {URL_PASSO_2}")
+            page.goto(URL_PASSO_2, wait_until="domcontentloaded")
+            aguardar_renderizacao_total(page, contexto="tela de cotacoes de frete")
+            print("Aguardando 4s antes de procurar o botao Adicionar...")
+            page.wait_for_timeout(4000)
+            page.locator(SEL_ADICIONAR).first.wait_for(state="visible")
+        else:
+            print("Nao foi detectada tela de login. Aguardando o tempo restante (25s) pelo botao Adicionar...")
+            page.locator(SEL_ADICIONAR).first.wait_for(state="visible", timeout=25000)
 
 def marcar_pagamento_frete(page) -> None:
     seletor_radio = f"{SEL_RADIO_PAGAMENTO_FRETE}[value='{OPT_PAGAMENTO_FRETE_RADIO_VALUE}']"
@@ -308,8 +329,16 @@ def clicar_cadastrar_e_aguardar(page) -> None:
     aguardar_renderizacao_total(page, contexto="apos-cadastrar")
 
 
-def preencher_formulario_linha(page, linha: LinhaAutomacao, validade: str, data_referencia: str, is_nilo: bool = False) -> None:
-    acessar_url_cotacoes_e_aguardar(page)
+def preencher_formulario_linha(
+    page,
+    linha: LinhaAutomacao,
+    validade: str,
+    data_referencia: str,
+    is_nilo: bool = False,
+    usuario: str | None = None,
+    senha: str | None = None,
+) -> None:
+    acessar_url_cotacoes_e_aguardar(page, usuario=usuario, senha=senha)
 
     print("Clicando em Adicionar...")
     page.locator(SEL_ADICIONAR).first.click()
@@ -393,6 +422,16 @@ def executar_passo_2_lote(
     config = PlaywrightVPSConfig(headless=True, record_video_dir=artifacts_path)
     with PlaywrightVPSClient(config) as client:
         page = client.page
+        
+        # Handler global para registrar e descartar diálogos do navegador de forma automática e segura
+        def _lidar_com_dialogo(dialog):
+            print(f"[ALERTA DETECTADO] Tipo: {dialog.type} | Mensagem: {dialog.message}")
+            try:
+                dialog.dismiss()
+            except Exception:
+                pass
+        page.on("dialog", _lidar_com_dialogo)
+
         try:
             realizar_login_na_sessao(page, usuario=usuario, senha=senha)
 
@@ -406,6 +445,8 @@ def executar_passo_2_lote(
                     validade=validade,
                     data_referencia=data_referencia,
                     is_nilo=is_nilo,
+                    usuario=usuario,
+                    senha=senha,
                 )
         except Exception as exc:
             screenshot_path = None
@@ -449,8 +490,25 @@ def executar_passo_2(
     config = PlaywrightVPSConfig(headless=True, record_video_dir=artifacts_path)
     with PlaywrightVPSClient(config) as client:
         page = client.page
+        
+        # Handler global para registrar e descartar diálogos do navegador de forma automática e segura
+        def _lidar_com_dialogo(dialog):
+            print(f"[ALERTA DETECTADO] Tipo: {dialog.type} | Mensagem: {dialog.message}")
+            try:
+                dialog.dismiss()
+            except Exception:
+                pass
+        page.on("dialog", _lidar_com_dialogo)
+
         realizar_login_na_sessao(page, usuario=usuario, senha=senha)
-        preencher_formulario_linha(page, linha=linha, validade=validade, data_referencia=data_referencia)
+        preencher_formulario_linha(
+            page,
+            linha=linha,
+            validade=validade,
+            data_referencia=data_referencia,
+            usuario=usuario,
+            senha=senha,
+        )
 
 
 if __name__ == "__main__":
