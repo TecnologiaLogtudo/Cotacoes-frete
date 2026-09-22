@@ -231,9 +231,82 @@ def marcar_pagamento_frete(page) -> None:
     print(f"Pagamento de frete marcado com fallback: {resultado.get('modo', 'desconhecido')}")
 
 
+def _encontrar_melhor_opcao(opcoes: list[dict[str, str]], alvo: str) -> dict[str, str] | None:
+    """Encontra a melhor opcao em uma lista de {value, label} para o texto alvo.
+    
+    Estrategia de correspondencia (ordem de prioridade):
+    1. Match exato de label ou value
+    2. Match ignorando espacos nas pontas (strip)
+    3. Match normalizado (sem acentos e em maiusculas)
+    4. Match de prefixo normalizado (ex: APROVADA / Aprovado Cliente)
+    5. Substring match
+    """
+    alvo_norm = normalizar_texto(alvo)
+    if not alvo_norm:
+        return None
+
+    # 1. Match exato
+    for opt in opcoes:
+        if opt["label"] == alvo or opt["value"] == alvo:
+            return opt
+
+    # 2. Trimmed match
+    alvo_trimmed = alvo.strip()
+    for opt in opcoes:
+        if opt["label"].strip() == alvo_trimmed:
+            return opt
+
+    # 3. Match normalizado (sem acento, maiusculas)
+    for opt in opcoes:
+        if normalizar_texto(opt["label"]) == alvo_norm:
+            return opt
+
+    # 4. Prefixo (ex: 'APROVAD' em 'APROVADA' vs 'APROVADO CLIENTE')
+    alvo_prefixo = alvo_norm[:6] if len(alvo_norm) >= 6 else alvo_norm
+    for opt in opcoes:
+        label_norm = normalizar_texto(opt["label"])
+        if label_norm and label_norm[:6] == alvo_prefixo:
+            return opt
+
+    # 5. Substring match
+    for opt in opcoes:
+        label_norm = normalizar_texto(opt["label"])
+        if label_norm and (alvo_norm in label_norm or label_norm in alvo_norm):
+            return opt
+
+    return None
+
+
+def selecionar_opcao_select(page, seletor: str, alvo: str, nome_campo: str = "", timeout_ms: int = 10000) -> None:
+    page.locator(seletor).wait_for(state="visible", timeout=timeout_ms)
+    
+    opcoes = []
+    inicio = datetime.now()
+    while (datetime.now() - inicio).total_seconds() * 1000 < timeout_ms:
+        opcoes = page.eval_on_selector_all(
+            f"{seletor} option",
+            "els => els.map(el => ({ value: el.value, label: (el.textContent || '').replace(/\\s+/g, ' ').trim() }))",
+        )
+        opcoes_validas = [o for o in opcoes if o["value"] or o["label"]]
+        if opcoes_validas:
+            break
+        page.wait_for_timeout(200)
+
+    opcao = _encontrar_melhor_opcao(opcoes, alvo)
+    if opcao and opcao.get("value") is not None:
+        print(f"Selecionando {nome_campo or seletor}: '{opcao['label']}' (value='{opcao['value']}')")
+        page.locator(seletor).select_option(value=opcao["value"])
+    else:
+        labels_disponiveis = [o["label"] for o in opcoes if o["label"]]
+        raise ValueError(
+            f"Nao foi possivel encontrar a opcao '{alvo}' no campo {nome_campo or seletor}. "
+            f"Opcoes disponiveis na tela: {labels_disponiveis}"
+        )
+
+
 def selecionar_regra_frete_e_sugerir_tabela(page) -> None:
     print(f"Selecionando Regra de frete: {OPT_REGRA_FRETE_COTACAO_LATAM}...")
-    page.locator(SEL_REGRA_FRETE).select_option(label=OPT_REGRA_FRETE_COTACAO_LATAM)
+    selecionar_opcao_select(page, SEL_REGRA_FRETE, OPT_REGRA_FRETE_COTACAO_LATAM, nome_campo="Regra de frete")
 
     print("Clicando em Sugerir tabela de preços...")
     page.locator(SEL_BOTAO_SUGERIR_TABELA).click()
@@ -279,7 +352,7 @@ def selecionar_categoria_veiculo_por_perfil(page, perfil: str) -> None:
     page.locator(SEL_BTN_PESQ_CATEGORIA_VEICULO).click()
     page.wait_for_timeout(1000)
     print(f"Selecionando Cat. Veículo com valor da coluna 'Perfil': {perfil}")
-    page.locator(SEL_CATEGORIA_VEICULO).select_option(label=perfil)
+    selecionar_opcao_select(page, SEL_CATEGORIA_VEICULO, perfil, nome_campo="Cat. Veículo")
 
 
 def selecionar_remetente_por_base(page, base: str) -> None:
@@ -343,12 +416,11 @@ def preencher_formulario_linha(
     print("Clicando em Adicionar...")
     page.locator(SEL_ADICIONAR).first.click()
 
-    print("Selecionando Agência: LOGTUDO MATRIZ - BAHIA...")
-    page.locator(SEL_AGENCIA).wait_for(state="visible")
-    page.locator(SEL_AGENCIA).select_option(label=OPT_AGENCIA_MATRIZ_BAHIA)
+    print(f"Selecionando Agência: {OPT_AGENCIA_MATRIZ_BAHIA}...")
+    selecionar_opcao_select(page, SEL_AGENCIA, OPT_AGENCIA_MATRIZ_BAHIA, nome_campo="Agência")
 
-    print("Selecionando Status: Aprovado Cliente...")
-    page.locator(SEL_STATUS).select_option(label=OPT_STATUS_APROVADO_CLIENTE)
+    print(f"Selecionando Status: {OPT_STATUS_APROVADO_CLIENTE}...")
+    selecionar_opcao_select(page, SEL_STATUS, OPT_STATUS_APROVADO_CLIENTE, nome_campo="Status")
 
     print("Digitando Operação: Carga fechada...")
     page.locator(SEL_OPERACAO).fill(OPT_OPERACAO_CARGA_FECHADA)

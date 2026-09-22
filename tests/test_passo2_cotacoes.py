@@ -2,6 +2,7 @@ from automacao.steps.passo2_cotacoes import (
     normalizar_texto,
     _remetente_label_matches_base,
     calcular_data_pagamento,
+    _encontrar_melhor_opcao,
 )
 
 
@@ -51,3 +52,26 @@ def test_calcular_data_pagamento_virada_de_ano():
     # SPOT em dezembro após dia 15 -> janeiro do ano seguinte
     res = calcular_data_pagamento("SPOT", "20/12/2025", "01/01/2025")
     assert res == "10/01/2026"
+
+
+def test_encontrar_melhor_opcao_aprovada_com_html_real():
+    opcoes = [
+        {"value": "", "label": ""},
+        {"value": "3", "label": "AG. RETORNO"},
+        {"value": "2", "label": "APROVADA"},
+        {"value": "9", "label": "CANCELADA"},
+        {"value": "10", "label": "CUSTO LOGTUDO"},
+        {"value": "5", "label": "FECHADA"},
+        {"value": "1", "label": "REJEITADA"},
+        {"value": "8", "label": "VINCULADA"},
+    ]
+    # Teste 1: Buscar "APROVADA"
+    res1 = _encontrar_melhor_opcao(opcoes, "APROVADA")
+    assert res1 is not None
+    assert res1["value"] == "2"
+
+    # Teste 2: Buscar "Aprovado Cliente" (fallback por prefixo / normalizado)
+    res2 = _encontrar_melhor_opcao(opcoes, "Aprovado Cliente")
+    assert res2 is not None
+    assert res2["value"] == "2"
+

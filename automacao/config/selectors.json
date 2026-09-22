@@ -35,7 +35,7 @@
   },
   "options": {
     "agencia_matriz_bahia": "LOGTUDO MATRIZ - BAHIA",
-    "status_aprovado_cliente": "Aprovado Cliente",
+    "status_aprovado_cliente": "APROVADA",
     "regra_frete_cotacao_latam": "COTAÇÃO LATAM",
     "operacao_carga_fechada": "Carga fechada",
     "termo_pesquisa_remetente": "Tam linhas",
