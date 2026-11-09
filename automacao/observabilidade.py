@@ -490,7 +490,28 @@ def _parse_log_lines(task_id: str) -> list[ParsedLogLine]:
     return out
 
 
+_REDIS_CHECKED = False
+_REDIS_OK = False
+
+
+def _is_redis_available() -> bool:
+    global _REDIS_CHECKED, _REDIS_OK
+    if _REDIS_CHECKED:
+        return _REDIS_OK
+    try:
+        from automacao.queue import get_redis_connection
+        conn = get_redis_connection()
+        conn.ping()
+        _REDIS_OK = True
+    except Exception:
+        _REDIS_OK = False
+    _REDIS_CHECKED = True
+    return _REDIS_OK
+
+
 def _queue_handles():
+    if not _is_redis_available():
+        return None, None
     # Import tardio para evitar ciclo: observabilidade -> queue -> tasks -> observabilidade
     from automacao.queue import get_queue, get_redis_connection
 
@@ -542,30 +563,31 @@ def _collect_known_task_ids() -> list[str]:
     for file in jobs_dir().glob("*.log"):
         task_ids.add(file.stem)
 
-    queue, connection = _queue_handles()
-    registries = [
-        queue,
-        StartedJobRegistry(queue=queue),
-        FinishedJobRegistry(queue=queue),
-        FailedJobRegistry(queue=queue),
-        DeferredJobRegistry(queue=queue),
-        ScheduledJobRegistry(queue=queue),
-    ]
-    for registry in registries:
-        try:
-            ids = registry.get_job_ids()  # type: ignore[attr-defined]
-        except Exception:
-            ids = []
-        for job_id in ids:
-            task_ids.add(job_id)
-
-    # fallback para jobs com metadados em redis fora das registries
     try:
-        for key in connection.scan_iter(match="rq:job:*"):
-            key_text = key.decode() if isinstance(key, bytes) else str(key)
-            task_id = key_text.rsplit(":", 1)[-1]
-            if task_id:
-                task_ids.add(task_id)
+        queue, connection = _queue_handles()
+        if queue and connection:
+            registries = [
+                queue,
+                StartedJobRegistry(queue=queue),
+                FinishedJobRegistry(queue=queue),
+                FailedJobRegistry(queue=queue),
+                DeferredJobRegistry(queue=queue),
+                ScheduledJobRegistry(queue=queue),
+            ]
+            for registry in registries:
+                try:
+                    ids = registry.get_job_ids()  # type: ignore[attr-defined]
+                except Exception:
+                    ids = []
+                for job_id in ids:
+                    task_ids.add(job_id)
+
+            # fallback para jobs com metadados em redis fora das registries
+            for key in connection.scan_iter(match="rq:job:*"):
+                key_text = key.decode() if isinstance(key, bytes) else str(key)
+                task_id = key_text.rsplit(":", 1)[-1]
+                if task_id:
+                    task_ids.add(task_id)
     except Exception:
         pass
 
@@ -597,8 +619,8 @@ def _build_job_item(task_id: str) -> dict[str, Any]:
 
     try:
         _, connection = _queue_handles()
-        job = Job.fetch(task_id, connection=connection)
-    except NoSuchJobError:
+        job = Job.fetch(task_id, connection=connection) if connection else None
+    except Exception:
         job = None
 
     log_lines = _parse_log_lines(task_id)
@@ -1044,34 +1066,38 @@ def reset_logs(password: str) -> None:
                     pass
 
     # remove metadados de jobs do RQ para limpar histórico
-    queue, connection = _queue_handles()
-    registries = [
-        queue,
-        StartedJobRegistry(queue=queue),
-        FinishedJobRegistry(queue=queue),
-        FailedJobRegistry(queue=queue),
-        DeferredJobRegistry(queue=queue),
-        ScheduledJobRegistry(queue=queue),
-    ]
-    known_ids: set[str] = set()
-    for registry in registries:
-        try:
-            ids = registry.get_job_ids()  # type: ignore[attr-defined]
-        except Exception:
-            ids = []
-        for job_id in ids:
-            known_ids.add(job_id)
+    try:
+        queue, connection = _queue_handles()
+        if queue and connection:
+            registries = [
+                queue,
+                StartedJobRegistry(queue=queue),
+                FinishedJobRegistry(queue=queue),
+                FailedJobRegistry(queue=queue),
+                DeferredJobRegistry(queue=queue),
+                ScheduledJobRegistry(queue=queue),
+            ]
+            known_ids: set[str] = set()
+            for registry in registries:
+                try:
+                    ids = registry.get_job_ids()  # type: ignore[attr-defined]
+                except Exception:
+                    ids = []
+                for job_id in ids:
+                    known_ids.add(job_id)
 
-    for key in connection.scan_iter(match="rq:job:*"):
-        key_text = key.decode() if isinstance(key, bytes) else str(key)
-        known_ids.add(key_text.rsplit(":", 1)[-1])
+            for key in connection.scan_iter(match="rq:job:*"):
+                key_text = key.decode() if isinstance(key, bytes) else str(key)
+                known_ids.add(key_text.rsplit(":", 1)[-1])
 
-    for job_id in known_ids:
-        try:
-            job = Job.fetch(job_id, connection=connection)
-        except NoSuchJobError:
-            continue
-        try:
-            job.delete()
-        except Exception:
-            pass
+            for job_id in known_ids:
+                try:
+                    job = Job.fetch(job_id, connection=connection)
+                except Exception:
+                    continue
+                try:
+                    job.delete()
+                except Exception:
+                    pass
+    except Exception:
+        pass

@@ -6,16 +6,18 @@ export const templateConfig = {
     subtitle: 'Faturamentos adicionais v1',
   },
   phases: [
-    { id: 'F1', title: 'Leitura', subtitle: 'Entrada e validação da planilha' },
-    { id: 'F2', title: 'Acesso', subtitle: 'Login no portal Logtudo' },
-    { id: 'F3', title: 'Busca', subtitle: 'Localização da cotação por data' },
-    { id: 'F4', title: 'Preenchimento', subtitle: 'Lançamento de fretes (D2D/Amazon)' },
-    { id: 'F5', title: 'Conclusão', subtitle: 'Gravação final e evidências' },
+    { id: 'F1', title: 'Leitura', subtitle: 'Sanitização Excel' },
+    { id: 'F2', title: 'Login', subtitle: 'Sessão e-Login' },
+    { id: 'F3', title: 'Cotação', subtitle: 'Busca & Extração' },
+    { id: 'F4', title: 'Frete', subtitle: 'Dados do Motorista' },
+    { id: 'F5', title: 'Contrato', subtitle: 'Emissão & Saldo' },
   ],
   upload: {
     title: 'Planilha de Cotação',
-    help: 'Selecione ou arraste a planilha .xlsx para validação prévia de cabeçalhos e dados.',
+    help: 'Selecione ou arraste a planilha .xlsx (limite máximo de 100 MB) para validação prévia de cabeçalhos e dados.',
     accept: '.xlsx',
+    maxSizeMB: 100,
+    maxSizeBytes: 100 * 1024 * 1024,
   },
   operations: [
     {

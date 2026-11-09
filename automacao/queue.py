@@ -19,7 +19,7 @@ RESULT_TTL_SECONDS = int(os.getenv("RQ_RESULT_TTL_SECONDS", "86400"))
 
 
 def get_redis_connection() -> Redis:
-    return Redis.from_url(REDIS_URL)
+    return Redis.from_url(REDIS_URL, socket_connect_timeout=0.5, socket_timeout=0.5)
 
 
 def get_queue() -> Queue:

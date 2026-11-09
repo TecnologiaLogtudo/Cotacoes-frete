@@ -18,19 +18,23 @@ export default defineConfig(() => {
     plugins: [react()],
     server: {
       host: '0.0.0.0',
-      port: 5173,
+      port: 5180,
+      strictPort: true,
       proxy: {
-        '/api': {
+        '^(/cotacoes)?/api': {
           target: 'http://127.0.0.1:8000',
           changeOrigin: true,
+          rewrite: (path) => path.replace(/^\/cotacoes/, ''),
         },
-        '/health': {
+        '^(/cotacoes)?/health': {
           target: 'http://127.0.0.1:8000',
           changeOrigin: true,
+          rewrite: (path) => path.replace(/^\/cotacoes/, ''),
         },
-        '/manual-de-uso': {
+        '^(/cotacoes)?/manual-de-uso': {
           target: 'http://127.0.0.1:8000',
           changeOrigin: true,
+          rewrite: (path) => path.replace(/^\/cotacoes/, ''),
         },
       },
     },

@@ -94,3 +94,14 @@ def test_upload_validate_valid_workbook(client: TestClient, tmp_path: Path):
     assert len(data["preview"]) >= 1
     assert data["preview"][0]["reference"] == "1001"
     assert data["preview"][0]["nome"] == "Motorista Teste"
+
+
+def test_prefix_cotacoes_rewrite(client: TestClient):
+    # Garante que chamadas com prefixo /cotacoes/api e /cotacoes/health são redirecionadas pelo middleware
+    resp_health = client.get("/cotacoes/health")
+    assert resp_health.status_code == 200
+    assert resp_health.json() == {"status": "ok"}
+
+    resp_ops = client.get("/cotacoes/api/operacoes")
+    assert resp_ops.status_code == 200
+    assert "items" in resp_ops.json()

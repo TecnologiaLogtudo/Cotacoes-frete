@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import os
 import time
 from pathlib import Path
 
@@ -36,6 +37,18 @@ from automacao.queue import enqueue_cotacao_job, fetch_job, serialize_job_result
 app = FastAPI(title="Logtudo Cotacoes API", version="1.0.0")
 logger = logging.getLogger(__name__)
 
+
+@app.middleware("http")
+async def rewrite_cotacoes_prefix(request: Request, call_next):
+    path = request.scope.get("path", "")
+    if path.startswith("/cotacoes/api/") or path == "/cotacoes/api":
+        request.scope["path"] = path[len("/cotacoes") :]
+    elif path.startswith("/cotacoes/health") or path == "/cotacoes/health":
+        request.scope["path"] = path[len("/cotacoes") :]
+    elif path.startswith("/cotacoes/manual-de-uso") or path == "/cotacoes/manual-de-uso":
+        request.scope["path"] = path[len("/cotacoes") :]
+    return await call_next(request)
+
 WEB_DIST = Path(__file__).resolve().parent.parent / "web_dist"
 if not WEB_DIST.exists():
     _local_dist = Path(__file__).resolve().parent.parent / "web" / "dist"
@@ -43,7 +56,7 @@ if not WEB_DIST.exists():
         WEB_DIST = _local_dist
 MANUAL_HTML = Path(__file__).resolve().parent / "manual_de_uso.html"
 UPLOAD_CHUNK_SIZE = 1024 * 1024  # 1 MB
-MAX_XLSX_SIZE_BYTES = 20 * 1024 * 1024  # 20 MB
+MAX_XLSX_SIZE_BYTES = int(os.getenv("MAX_XLSX_SIZE_BYTES", str(100 * 1024 * 1024)))  # 100 MB
 
 
 class ResetLogsPayload(BaseModel):
@@ -221,7 +234,7 @@ async def create_cotacao_job(
                     target.unlink(missing_ok=True)
                     raise HTTPException(
                         status_code=413,
-                        detail="Arquivo excede o limite permitido de 20 MB.",
+                        detail="Arquivo excede o limite permitido de 100 MB.",
                     )
 
                 output.write(chunk)
@@ -318,7 +331,7 @@ async def upload_and_validate_job(
                     target.unlink(missing_ok=True)
                     raise HTTPException(
                         status_code=413,
-                        detail="Arquivo excede o limite permitido de 20 MB.",
+                        detail="Arquivo excede o limite permitido de 100 MB.",
                     )
                 output.write(chunk)
     finally:
