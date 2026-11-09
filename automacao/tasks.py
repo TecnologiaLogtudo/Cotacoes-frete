@@ -62,6 +62,7 @@ def processar_cotacoes_lote(
     max_rows_to_scan: int = 100,
     job_id: str | None = None,
     client_ip: str | None = None,
+    tipo_operacao: str = "D2D",
 ) -> dict:
     current_job = get_current_job()
     task_id = current_job.id if current_job else "unknown"
@@ -77,10 +78,12 @@ def processar_cotacoes_lote(
     with log_file.open("a", encoding="utf-8", buffering=1) as log:
         print(f"[{start_ts}] Job iniciado | task_id={task_id} | job_id={job_id}", file=log)
         print(f"Planilha recebida: {arquivo}", file=log)
+        print(f"Operação: {tipo_operacao}", file=log)
         print(f"Data referência: {data_referencia} | Validade: {validade}", file=log)
         register_job_started(task_id, job_id=job_id, username=usuario, ip=client_ip, started_at=start_ts)
         register_job_message(task_id, f"Job iniciado | task_id={task_id} | job_id={job_id}", timestamp=start_ts, username=usuario, ip=client_ip)
         register_job_message(task_id, f"Planilha recebida: {arquivo}", username=usuario, ip=client_ip)
+        register_job_message(task_id, f"Operação: {tipo_operacao}", username=usuario, ip=client_ip)
         register_job_message(task_id, f"Data referência: {data_referencia} | Validade: {validade}", username=usuario, ip=client_ip)
 
         try:
@@ -97,6 +100,7 @@ def processar_cotacoes_lote(
                     data_referencia=data_referencia,
                     max_rows_to_scan=max_rows_to_scan,
                     artifacts_path=str(artifacts_path),
+                    tipo_operacao=tipo_operacao,
                 )
             print(
                 f"[stage] fim_execucao_playwright | duracao_s={perf_counter() - stage_started:.3f}",
@@ -121,6 +125,7 @@ def processar_cotacoes_lote(
                 "task_id": task_id,
                 "job_id": job_id,
                 "planilha": str(arquivo),
+                "tipo_operacao": tipo_operacao,
                 "validade": validade,
                 "data_referencia": data_referencia,
                 "log_file": str(log_file),

@@ -19,6 +19,7 @@ def cmd_enqueue(args: argparse.Namespace) -> None:
         validade=args.validade,
         data_referencia=args.data_referencia,
         max_rows_to_scan=args.max_rows,
+        tipo_operacao=args.tipo_operacao,
     )
     print(f"Job enfileirado com sucesso. task_id={task.id}")
 
@@ -43,6 +44,7 @@ def build_parser() -> argparse.ArgumentParser:
     enqueue.add_argument("--validade", required=True, help="Validade para o formulario (ex.: 30/03/2026)")
     enqueue.add_argument("--data-referencia", required=True, help="Data para cruzamento no header da linha 3")
     enqueue.add_argument("--max-rows", type=int, default=100, help="Maximo de linhas para varrer")
+    enqueue.add_argument("--tipo-operacao", default="D2D", choices=["D2D", "AMAZON"], help="Tipo de operacao (D2D ou AMAZON)")
     enqueue.add_argument("--usuario", help="Usuario do Logtudo (opcional)")
     enqueue.add_argument("--senha", help="Senha do Logtudo (opcional, pode usar LOGTUDO_PASS)")
     enqueue.set_defaults(func=cmd_enqueue)

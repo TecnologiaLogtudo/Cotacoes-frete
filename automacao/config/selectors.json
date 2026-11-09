@@ -31,12 +31,14 @@
     "campo_pesquisa_cidade_fim": "input[name='pesquisa_cMunFim']",
     "botao_pesquisar_cidade_fim": "i[name='botaoPesquisa_cMunFim']",
     "campo_obs_interna": "textarea[name='dados_obsInterna']",
+    "campo_valor_frete": "input[name='dados_valorFrete']",
     "botao_cadastrar": "input#botao_cadastrar[name='botao_finalizacao'][value='Cadastrar']"
   },
   "options": {
     "agencia_matriz_bahia": "LOGTUDO MATRIZ - BAHIA",
     "status_aprovado_cliente": "APROVADA",
     "regra_frete_cotacao_latam": "COTAÇÃO LATAM",
+    "regra_frete_cotacao_varejo": "COTAÇÃO VAREJO",
     "operacao_carga_fechada": "Carga fechada",
     "termo_pesquisa_remetente": "Tam linhas",
     "pagamento_frete_radio_value": "R"

@@ -36,6 +36,7 @@ def enqueue_cotacao_job(
     max_rows_to_scan: int = 100,
     job_id: str | None = None,
     client_ip: str | None = None,
+    tipo_operacao: str = "D2D",
 ) -> Job:
     queue = get_queue()
     return queue.enqueue(
@@ -48,6 +49,7 @@ def enqueue_cotacao_job(
         max_rows_to_scan=max_rows_to_scan,
         job_id=job_id,
         client_ip=client_ip,
+        tipo_operacao=tipo_operacao,
         job_timeout=JOB_TIMEOUT_SECONDS,
         result_ttl=RESULT_TTL_SECONDS,
     )

@@ -1,0 +1,1050 @@
+.legacy-scope {
+  --blue: #2b6cb0;
+  --blue-strong: #1b3d6d;
+  --grafite: #11151d;
+  --grafite-2: #1b2230;
+  --surface: #202838;
+  --surface-2: #242f42;
+  --text: #f3f6fb;
+  --text-muted: #9aa7c2;
+  --alert: #f7b733;
+  --danger: #d9534f;
+  --success: #47c996;
+  --border: rgba(255, 255, 255, 0.08);
+  --shadow: 0 20px 50px rgba(10, 15, 25, 0.35);
+}
+
+.legacy-scope *{
+  box-sizing: border-box;
+}
+
+
+
+.legacy-scope .app{
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  min-height: 100vh;
+}
+
+.legacy-scope .sidebar{
+  background: linear-gradient(160deg, #0f1624, #141c2c);
+  border-right: 1px solid var(--border);
+  padding: 24px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.legacy-scope .brand{
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.legacy-scope .brand-mark{
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--blue), #4a90e2);
+  display: grid;
+  place-items: center;
+  font-family: "Space Grotesk", sans-serif;
+  font-weight: 700;
+}
+
+.legacy-scope .brand-title{
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.legacy-scope .brand-subtitle{
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.legacy-scope .nav{
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.legacy-scope .nav-divider{
+  margin: 10px 0 2px;
+  border-top: 1px solid var(--border);
+}
+
+.legacy-scope .nav-btn{
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text);
+  padding: 12px 14px;
+  border-radius: 12px;
+  text-align: left;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.nav-btn.active,
+.legacy-scope .nav-btn:hover{
+  background: var(--surface);
+  border-color: var(--border);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+}
+
+.legacy-scope .nav-link{
+  text-decoration: none;
+  display: block;
+}
+
+.legacy-scope .sidebar-footer{
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.legacy-scope .status-pill{
+  padding: 8px 10px;
+  background: var(--surface);
+  border-radius: 12px;
+  font-size: 12px;
+  border: 1px solid var(--border);
+}
+
+.legacy-scope .status-pill.secondary{
+  color: var(--text-muted);
+}
+
+.legacy-scope .main{
+  padding: 24px 28px 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.legacy-scope .topbar{
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+}
+
+.legacy-scope .topbar h1{
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 28px;
+  margin: 0;
+}
+
+.legacy-scope .topbar p{
+  margin: 6px 0 0;
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+.legacy-scope .topbar-actions{
+  display: flex;
+  gap: 12px;
+}
+
+.legacy-scope .view{
+  display: none;
+  flex-direction: column;
+  gap: 18px;
+  animation: fadeIn 0.4s ease;
+}
+
+.legacy-scope .view.active{
+  display: flex;
+}
+
+.legacy-scope .grid{
+  display: grid;
+  gap: 18px;
+  min-width: 0;
+}
+
+.legacy-scope .grid.two-col{
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.legacy-scope .grid.single{
+  grid-template-columns: 1fr;
+}
+
+.legacy-scope .card{
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: var(--shadow);
+  padding: 18px;
+  min-width: 0;
+}
+
+.legacy-scope .card.muted{
+  background: linear-gradient(140deg, #1a2233, #141c2c);
+}
+
+.legacy-scope .card-header{
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.legacy-scope .card-header h2{
+  margin: 0;
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 18px;
+}
+
+.card-
+
+.legacy-scope .card-footer{
+  margin-top: 12px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.legacy-scope .badge{
+  background: rgba(43, 108, 176, 0.2);
+  color: #8fc1ff;
+  border: 1px solid rgba(43, 108, 176, 0.5);
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+}
+
+.legacy-scope .badge.success{
+  background: rgba(71, 201, 150, 0.2);
+  color: #8ef0c8;
+  border-color: rgba(71, 201, 150, 0.45);
+}
+
+.legacy-scope .badge.error{
+  background: rgba(217, 83, 79, 0.2);
+  color: #ffaaa7;
+  border-color: rgba(217, 83, 79, 0.45);
+}
+
+.legacy-scope .badge.running{
+  background: rgba(247, 183, 51, 0.2);
+  color: #ffd98f;
+  border-color: rgba(247, 183, 51, 0.45);
+}
+
+.legacy-scope .badge.pending{
+  background: rgba(83, 118, 167, 0.2);
+  color: #9fc0ea;
+  border-color: rgba(83, 118, 167, 0.45);
+}
+
+.legacy-scope .badge.ghost{
+  background: transparent;
+  color: var(--text-muted);
+  border: 1px dashed var(--border);
+}
+
+.legacy-scope .btn{
+  background: var(--surface-2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  padding: 10px 16px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 13px;
+  transition: all 0.2s ease;
+}
+
+.legacy-scope .btn.primary{
+  background: var(--blue);
+  border-color: transparent;
+}
+
+.legacy-scope .btn.danger{
+  background: var(--danger);
+  border-color: transparent;
+}
+
+.legacy-scope .btn.ghost{
+  background: transparent;
+  border-color: var(--border);
+  color: var(--text-muted);
+}
+
+.legacy-scope .btn:disabled{
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+
+.legacy-scope .file-upload{
+  border: 1px dashed var(--border);
+  border-radius: 12px;
+  padding: 18px;
+  text-align: center;
+  cursor: pointer;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.legacy-scope .file-upload strong{
+  font-size: 30px;
+  font-weight: 600;
+}
+
+.legacy-scope .file-upload input{
+  display: none;
+}
+
+.legacy-scope .file-meta{
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.legacy-scope .mapping-grid{
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 14px;
+}
+
+.legacy-scope .form-grid{
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 14px;
+}
+
+.legacy-scope .single-col-form{
+  grid-template-columns: 1fr;
+}
+
+.legacy-scope .credentials-row{
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.credentials-row > * {
+  flex: 1 1 200px;
+}
+
+.legacy-scope .field{
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.field input,
+.legacy-scope .field select{
+  background: var(--surface-2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  width: 100%;
+  min-width: 0;
+}
+
+.legacy-scope .password-row{
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.legacy-scope .password-toggle{
+  min-width: 88px;
+}
+
+.legacy-scope .table-wrap{
+  overflow-x: auto;
+  overflow-y: auto;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  max-width: 100%;
+  max-height: 360px;
+}
+
+.legacy-scope table{
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.legacy-scope thead{
+  background: #1c2637;
+}
+
+th,
+.legacy-scope td{
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-muted);
+}
+
+.legacy-scope th{
+  color: var(--text);
+  text-align: left;
+  font-weight: 500;
+}
+
+.legacy-scope .toggle-row{
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--text-muted);
+}
+
+.legacy-scope .toggle-row.compact{
+  gap: 10px;
+  font-size: 13px;
+}
+
+.legacy-scope .switch{
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 24px;
+}
+
+.legacy-scope .switch input{
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.legacy-scope .slider{
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: #3a465b;
+  border-radius: 999px;
+  transition: 0.2s;
+}
+
+.legacy-scope .slider:before{
+  position: absolute;
+  content: "";
+  height: 18px;
+  width: 18px;
+  left: 3px;
+  bottom: 3px;
+  background: white;
+  border-radius: 50%;
+  transition: 0.2s;
+}
+
+.switch input:checked + .slider {
+  background: var(--blue);
+}
+
+.switch input:checked + .slider:before {
+  transform: translateX(20px);
+}
+
+.legacy-scope .control-buttons{
+  display: flex;
+  gap: 10px;
+}
+
+.legacy-scope .progress{
+  height: 10px;
+  background: #2a3245;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.legacy-scope .progress-bar{
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, var(--blue), #4aa3ff);
+  transition: width 0.3s ease;
+}
+
+.legacy-scope .progress-meta{
+  display: flex;
+  justify-content: space-between;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.legacy-scope .summary-line{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+.legacy-scope .summary-progress-head{
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.legacy-scope .summary-progress-label{
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.legacy-scope .summary-progress-value{
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 26px;
+  line-height: 1;
+}
+
+.legacy-scope .summary-stats{
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.summary-stats div,
+.legacy-scope .summary-bottom div{
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 12px;
+  padding: 10px 12px;
+  min-width: 0;
+}
+
+.summary-stats strong,
+.legacy-scope .summary-bottom strong{
+  font-size: 12px;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.summary-stats span,
+.legacy-scope .summary-bottom span{
+  font-size: 17px;
+  color: var(--text);
+  font-weight: 600;
+  word-break: break-word;
+}
+
+.legacy-scope .summary-bottom{
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 12px;
+}
+
+.logs-card .card-
+
+.log-
+
+.legacy-scope .log-controls{
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.legacy-scope .execution-header{
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.legacy-scope .execution-controls{
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.log-controls select,
+.legacy-scope .log-controls input{
+  background: var(--surface-2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 12px;
+}
+
+.log-
+
+.legacy-scope .log-entry{
+  display: grid;
+  grid-template-columns: 70px 90px 1fr;
+  gap: 10px;
+  font-size: 12px;
+  padding: 4px 0;
+}
+
+.legacy-scope .log-entry span{
+  color: var(--text-muted);
+}
+
+.legacy-scope .log-entry .level{
+  font-weight: 600;
+}
+
+.legacy-scope .log-entry.success .level{
+  color: var(--success);
+}
+
+.legacy-scope .log-entry.error .level{
+  color: var(--danger);
+}
+
+.legacy-scope .log-entry.warning .level{
+  color: var(--alert);
+}
+
+.legacy-scope .summary-card{
+  text-align: center;
+}
+
+.legacy-scope .summary-card h3{
+  margin: 0;
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+.legacy-scope .summary-value{
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 26px;
+  margin-top: 8px;
+}
+
+.legacy-scope .future-grid{
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.legacy-scope .future-item{
+  padding: 14px;
+  border-radius: 12px;
+  border: 1px dashed var(--border);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.legacy-scope .future-title{
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 16px;
+  margin-bottom: 6px;
+}
+
+.legacy-scope .checkbox{
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 1100px) {
+.legacy-scope .grid.two-col{
+    grid-template-columns: 1fr;
+  }
+.legacy-scope .future-grid{
+    grid-template-columns: 1fr;
+  }
+  .summary-stats,
+.legacy-scope .summary-bottom{
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 900px) {
+.legacy-scope .app{
+    grid-template-columns: 1fr;
+  }
+.legacy-scope .sidebar{
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+  }
+.legacy-scope .nav{
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+.legacy-scope .sidebar-footer{
+    flex-direction: row;
+    gap: 6px;
+  }
+.legacy-scope .topbar{
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+.legacy-scope .file-name-row{
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.legacy-scope .file-reset{
+  border: none;
+  background: transparent;
+  color: #888;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+}
+
+.legacy-scope .file-reset:hover{
+  color: #d9534f;
+}
+
+.legacy-scope .observability-page .admin-layout{
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  min-height: 100vh;
+}
+
+.legacy-scope .observability-page .admin-sidebar{
+  background: linear-gradient(160deg, #0f1624, #141c2c);
+  border-right: 1px solid var(--border);
+  padding: 24px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.legacy-scope .observability-page .admin-main{
+  padding: 24px 28px 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.legacy-scope .observability-page .admin-topbar{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 6px;
+}
+
+.legacy-scope .observability-page .admin-title{
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 28px;
+}
+
+.legacy-scope .observability-page .admin-subtitle{
+  color: var(--text-muted);
+  font-size: 14px;
+  margin-top: 6px;
+}
+
+.legacy-scope .observability-page .admin-actions{
+  display: flex;
+  gap: 10px;
+}
+
+.legacy-scope .observability-page .admin-tabs{
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.legacy-scope .observability-page .tab{
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text);
+  padding: 12px 14px;
+  border-radius: 12px;
+  text-align: left;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.observability-page .tab.active,
+.legacy-scope .observability-page .tab:hover{
+  background: var(--surface);
+  border-color: var(--border);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+}
+
+.legacy-scope .observability-page .panel{
+  display: block;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 18px;
+  box-shadow: var(--shadow);
+  min-width: 0;
+}
+
+.legacy-scope .observability-page .panel-header{
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.legacy-scope .observability-page .panel-header h2{
+  margin: 0;
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 18px;
+}
+
+.observability-page .panel-header input,
+.legacy-scope .observability-page .panel-header select{
+  background: var(--surface-2);
+  color: var(--text);
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+}
+
+.observability-page .panel-header input:focus,
+.legacy-scope .observability-page .panel-header select:focus{
+  outline: 2px solid rgba(143, 193, 255, 0.65);
+  outline-offset: 1px;
+  border-color: rgba(143, 193, 255, 0.55);
+}
+
+.legacy-scope .observability-page .kpi-grid{
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.legacy-scope .observability-page .kpi-card{
+  background: linear-gradient(140deg, #1a2233, #141c2c);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 18px;
+  box-shadow: var(--shadow);
+}
+
+.legacy-scope .observability-page .kpi-label{
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+.legacy-scope .observability-page .kpi-value{
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 26px;
+  font-weight: 600;
+  margin-top: 8px;
+}
+
+.legacy-scope .observability-page .jobs-row{
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.legacy-scope .observability-page .jobs-row:hover td{
+  background: rgba(43, 108, 176, 0.16);
+  color: var(--text);
+}
+
+.legacy-scope .observability-page .jobs-row.active td{
+  background: rgba(43, 108, 176, 0.28);
+  color: var(--text);
+}
+
+.legacy-scope .observability-page .selected-job-feedback{
+  margin-left: auto;
+  padding: 8px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.legacy-scope .observability-page .selected-job-feedback strong{
+  color: var(--text);
+}
+
+.legacy-scope .observability-page .copy-id-btn{
+  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text);
+  border-radius: 8px;
+  padding: 6px 8px;
+  cursor: copy;
+  transition: all 0.18s ease;
+}
+
+.legacy-scope .observability-page .copy-id-btn:hover{
+  background: rgba(143, 193, 255, 0.12);
+  border-color: rgba(143, 193, 255, 0.4);
+}
+
+.legacy-scope .observability-page .copy-id-btn:focus{
+  outline: 2px solid rgba(143, 193, 255, 0.65);
+  outline-offset: 1px;
+}
+
+.legacy-scope .observability-page .copy-id-btn.copied{
+  background: rgba(71, 201, 150, 0.18);
+  border-color: rgba(71, 201, 150, 0.55);
+}
+
+.legacy-scope .observability-page .copy-id-text{
+  font-family: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  font-size: 12px;
+}
+
+.legacy-scope .observability-page .copy-id-hint{
+  font-size: 11px;
+  color: #9fc0ea;
+}
+
+.legacy-scope .observability-page .copy-id-btn.copied .copy-id-hint{
+  color: #8ef0c8;
+}
+
+.legacy-scope .observability-page .btn:focus{
+  outline: 2px solid rgba(143, 193, 255, 0.65);
+  outline-offset: 1px;
+}
+
+.legacy-scope .observability-page .artifact-video-section{
+  margin-top: 16px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: rgba(10, 16, 28, 0.45);
+}
+
+.legacy-scope .observability-page .artifact-video-section h3{
+  margin: 0 0 10px;
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 14px;
+  color: var(--text);
+}
+
+.legacy-scope .observability-page .artifact-video-player{
+  width: 100%;
+  max-height: 420px;
+  border-radius: 10px;
+  background: #04070e;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.legacy-scope .observability-page .artifact-video-open-link{
+  display: inline-block;
+  margin-top: 10px;
+  color: #8fc1ff;
+  text-decoration: none;
+  border-bottom: 1px dashed rgba(143, 193, 255, 0.45);
+}
+
+.legacy-scope .observability-page .artifact-video-open-link:hover{
+  color: #cfe5ff;
+  border-bottom-color: rgba(207, 229, 255, 0.7);
+}
+
+.legacy-scope .observability-page .mt-16{
+  margin-top: 16px;
+}
+
+.legacy-scope .toast-root{
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  z-index: 1200;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.legacy-scope .toast{
+  min-width: 220px;
+  max-width: 320px;
+  border-radius: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  background: #1a2233;
+  color: var(--text);
+  box-shadow: var(--shadow);
+  opacity: 0;
+  transform: translateY(4px);
+}
+
+.legacy-scope .toast.show{
+  opacity: 1;
+  transform: translateY(0);
+  transition: all 0.2s ease;
+}
+
+.legacy-scope .toast.success{
+  border-color: rgba(71, 201, 150, 0.5);
+  background: rgba(31, 74, 60, 0.92);
+}
+
+.legacy-scope .toast.error{
+  border-color: rgba(217, 83, 79, 0.55);
+  background: rgba(81, 34, 36, 0.92);
+}
+
+@media (max-width: 1200px) {
+.legacy-scope .observability-page .kpi-grid{
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 900px) {
+.legacy-scope .observability-page .admin-layout{
+    grid-template-columns: 1fr;
+  }
+.legacy-scope .observability-page .admin-sidebar{
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+  }
+.legacy-scope .observability-page .admin-tabs{
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+.legacy-scope .observability-page .tab{
+    text-align: center;
+  }
+.legacy-scope .observability-page .admin-main{
+    padding: 18px;
+  }
+}
+
+@media (max-width: 700px) {
+.legacy-scope .observability-page .admin-topbar{
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+.legacy-scope .observability-page .kpi-grid{
+    grid-template-columns: 1fr;
+  }
+}

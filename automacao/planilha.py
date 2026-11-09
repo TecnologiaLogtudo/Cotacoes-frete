@@ -21,6 +21,7 @@ class LinhaAutomacao:
     operacao: str
     frete_negociado: str
     excel_row: int
+    frete_valor: str = ""
 
 
 def _normalizar(texto: str) -> str:
@@ -58,14 +59,17 @@ def _mapear_headers(ws, header_row: int) -> Dict[str, int]:
     return headers
 
 
-def _encontrar_coluna_data(ws, header_row: int, data_referencia: str) -> int:
+def _encontrar_todas_colunas_data(ws, header_row: int, data_referencia: str) -> List[int]:
     data_norm = _normalizar(data_referencia)
     data_ref_parts = _extrair_partes_data(data_referencia)
+    colunas: List[int] = []
+
     for col in range(1, ws.max_column + 1):
         valor_cabecalho = ws.cell(row=header_row, column=col).value
         cabecalho = _texto_celula(valor_cabecalho)
         if cabecalho and _normalizar(cabecalho) == data_norm:
-            return col
+            colunas.append(col)
+            continue
 
         # Match flexível para cenários como:
         # - cabeçalho exibido como "27-mar"
@@ -73,19 +77,27 @@ def _encontrar_coluna_data(ws, header_row: int, data_referencia: str) -> int:
         if data_ref_parts:
             cabecalho_parts = _extrair_partes_data(valor_cabecalho)
             if _mesma_data(data_ref_parts, cabecalho_parts):
-                return col
+                colunas.append(col)
 
-    cabecalhos_encontrados: List[str] = []
-    for col in range(1, ws.max_column + 1):
-        texto = _texto_celula(ws.cell(row=header_row, column=col).value)
-        if texto:
-            cabecalhos_encontrados.append(texto)
-    resumo_cabecalhos = ", ".join(cabecalhos_encontrados[:12]) if cabecalhos_encontrados else "(vazio)"
+    if not colunas:
+        cabecalhos_encontrados: List[str] = []
+        for col in range(1, ws.max_column + 1):
+            texto = _texto_celula(ws.cell(row=header_row, column=col).value)
+            if texto:
+                cabecalhos_encontrados.append(texto)
+        resumo_cabecalhos = ", ".join(cabecalhos_encontrados[:12]) if cabecalhos_encontrados else "(vazio)"
 
-    raise ValueError(
-        f"Nao foi encontrada coluna de data '{data_referencia}' na linha de cabecalho {header_row}. "
-        f"Cabecalhos encontrados: {resumo_cabecalhos}"
-    )
+        raise ValueError(
+            f"Nao foi encontrada coluna de data '{data_referencia}' na linha de cabecalho {header_row}. "
+            f"Cabecalhos encontrados: {resumo_cabecalhos}"
+        )
+
+    return colunas
+
+
+def _encontrar_coluna_data(ws, header_row: int, data_referencia: str) -> int:
+    colunas = _encontrar_todas_colunas_data(ws, header_row=header_row, data_referencia=data_referencia)
+    return colunas[0]
 
 
 def _extrair_partes_data(valor: Any) -> tuple[int, int, int | None] | None:
@@ -185,7 +197,12 @@ def carregar_linhas_para_automacao(
     data_referencia: str,
     header_row: int = 3,
     max_rows_to_scan: int = 100,
+    tipo_operacao: Any = "D2D",
 ) -> List[LinhaAutomacao]:
+    from automacao.operacoes import BaseOperacaoHandler, obter_operacao_handler
+
+    handler = tipo_operacao if isinstance(tipo_operacao, BaseOperacaoHandler) else obter_operacao_handler(tipo_operacao)
+
     arquivo = Path(planilha_path)
     if not arquivo.exists():
         raise FileNotFoundError(f"Planilha nao encontrada: {planilha_path}")
@@ -211,7 +228,13 @@ def carregar_linhas_para_automacao(
         if not col_base:
             raise ValueError("Cabecalho 'Base' nao encontrado na linha 3.")
 
-        col_data = _encontrar_coluna_data(ws, header_row=header_row, data_referencia=data_referencia)
+        colunas_data = _encontrar_todas_colunas_data(ws, header_row=header_row, data_referencia=data_referencia)
+        col_frete_valor, col_frete_negociado = handler.extrair_colunas_frete(
+            ws=ws,
+            header_row=header_row,
+            data_referencia=data_referencia,
+            colunas_data=colunas_data,
+        )
 
         inicio = header_row + 1
         fim = inicio + max_rows_to_scan - 1
@@ -229,7 +252,8 @@ def carregar_linhas_para_automacao(
             perfil = _texto_celula(values[col_perfil - 1] if len(values) >= col_perfil else "")
             base = _texto_celula(values[col_base - 1] if len(values) >= col_base else "")
             operacao = _texto_celula(values[col_operacao - 1] if col_operacao and len(values) >= col_operacao else "")
-            frete = _formatar_moeda(values[col_data - 1] if len(values) >= col_data else "")
+            frete_valor = _formatar_moeda(values[col_frete_valor - 1] if col_frete_valor and len(values) >= col_frete_valor else "")
+            frete_negociado = _formatar_moeda(values[col_frete_negociado - 1] if len(values) >= col_frete_negociado else "")
 
             linhas.append(
                 LinhaAutomacao(
@@ -239,8 +263,9 @@ def carregar_linhas_para_automacao(
                     perfil=perfil,
                     base=base,
                     operacao=operacao,
-                    frete_negociado=frete,
+                    frete_negociado=frete_negociado,
                     excel_row=idx,
+                    frete_valor=frete_valor,
                 )
             )
     finally:

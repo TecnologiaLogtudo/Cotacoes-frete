@@ -9,6 +9,7 @@ from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 
 from Conectividade.playwright_vps_connect import PlaywrightVPSConfig, PlaywrightVPSClient
 from automacao.config_loader import carregar_mapeamento
+from automacao.operacoes import BaseOperacaoHandler, obter_operacao_handler
 from automacao.planilha import LinhaAutomacao, carregar_linhas_para_automacao
 
 
@@ -25,6 +26,7 @@ SEL_STATUS = MAPPINGS["selectors"]["select_status"]
 SEL_REGRA_FRETE = MAPPINGS["selectors"]["select_regra_frete"]
 SEL_BOTAO_SUGERIR_TABELA = MAPPINGS["selectors"]["botao_sugerir_tabela_precos"]
 SEL_FRETE_NEGOCIADO = MAPPINGS["selectors"]["campo_frete_negociado"]
+SEL_VALOR_FRETE = MAPPINGS["selectors"].get("campo_valor_frete", "input[name='dados_valorFrete']")
 SEL_OPERACAO = MAPPINGS["selectors"]["campo_operacao"]
 SEL_PESQUISAR_OPERACAO = MAPPINGS["selectors"]["botao_pesquisar_operacao"]
 SEL_KM = MAPPINGS["selectors"]["campo_km"]
@@ -47,6 +49,7 @@ SEL_BOTAO_CADASTRAR = MAPPINGS["selectors"]["botao_cadastrar"]
 OPT_AGENCIA_MATRIZ_BAHIA = MAPPINGS["options"]["agencia_matriz_bahia"]
 OPT_STATUS_APROVADO_CLIENTE = MAPPINGS["options"]["status_aprovado_cliente"]
 OPT_REGRA_FRETE_COTACAO_LATAM = MAPPINGS["options"]["regra_frete_cotacao_latam"]
+OPT_REGRA_FRETE_COTACAO_VAREJO = MAPPINGS["options"].get("regra_frete_cotacao_varejo", "COTAÇÃO VAREJO")
 OPT_OPERACAO_CARGA_FECHADA = MAPPINGS["options"]["operacao_carga_fechada"]
 OPT_TERMO_PESQ_REMETENTE = MAPPINGS["options"]["termo_pesquisa_remetente"]
 OPT_PAGAMENTO_FRETE_RADIO_VALUE = MAPPINGS["options"]["pagamento_frete_radio_value"]
@@ -410,7 +413,9 @@ def preencher_formulario_linha(
     is_nilo: bool = False,
     usuario: str | None = None,
     senha: str | None = None,
+    operacao_handler: BaseOperacaoHandler | str = "D2D",
 ) -> None:
+    handler = operacao_handler if isinstance(operacao_handler, BaseOperacaoHandler) else obter_operacao_handler(operacao_handler)
     acessar_url_cotacoes_e_aguardar(page, usuario=usuario, senha=senha)
 
     print("Clicando em Adicionar...")
@@ -448,9 +453,17 @@ def preencher_formulario_linha(
     marcar_pagamento_frete(page)
     selecionar_remetente_por_base(page, base=linha.base)
     copiar_uf_e_cidade_origem_para_destino(page)
-    selecionar_regra_frete_e_sugerir_tabela(page)
-
-    preencher_frete_negociado(page, frete_negociado=linha.frete_negociado, data_referencia=data_referencia)
+    
+    contexto = {
+        "SEL_REGRA_FRETE": SEL_REGRA_FRETE,
+        "SEL_BOTAO_SUGERIR_TABELA": SEL_BOTAO_SUGERIR_TABELA,
+        "SEL_FRETE_NEGOCIADO": SEL_FRETE_NEGOCIADO,
+        "SEL_VALOR_FRETE": SEL_VALOR_FRETE,
+        "OPT_REGRA_FRETE_COTACAO_LATAM": OPT_REGRA_FRETE_COTACAO_LATAM,
+        "OPT_REGRA_FRETE_COTACAO_VAREJO": OPT_REGRA_FRETE_COTACAO_VAREJO,
+        "selecionar_opcao_select": selecionar_opcao_select,
+    }
+    handler.aplicar_tabela_e_fretes(page, linha=linha, data_referencia=data_referencia, context=contexto)
     
     data_obs = calcular_data_pagamento(linha.operacao, validade, data_referencia, is_nilo)
     preencher_obs_interna(
@@ -471,13 +484,17 @@ def executar_passo_2_lote(
     data_referencia: str,
     max_rows_to_scan: int = 100,
     artifacts_path: str | None = None,
+    tipo_operacao: str = "D2D",
 ) -> None:
+    handler = obter_operacao_handler(tipo_operacao)
+    print(f"Iniciando execucao em lote para operacao: {handler.nome} ({handler.codigo})")
     print("[stage] inicio_leitura_planilha")
     linhas = carregar_linhas_para_automacao(
         planilha_path=planilha_path,
         data_referencia=data_referencia,
         header_row=3,
         max_rows_to_scan=max_rows_to_scan,
+        tipo_operacao=handler,
     )
     print("[stage] fim_leitura_planilha")
 
@@ -509,7 +526,7 @@ def executar_passo_2_lote(
 
             for idx, linha in enumerate(linhas, start=1):
                 print(
-                    f"\\nProcessando linha {idx}/{len(linhas)} da planilha (excel row {linha.excel_row}, Número {linha.numero})"
+                    f"\nProcessando linha {idx}/{len(linhas)} da planilha (excel row {linha.excel_row}, Número {linha.numero})"
                 )
                 preencher_formulario_linha(
                     page,
@@ -519,6 +536,7 @@ def executar_passo_2_lote(
                     is_nilo=is_nilo,
                     usuario=usuario,
                     senha=senha,
+                    operacao_handler=handler,
                 )
         except Exception as exc:
             screenshot_path = None
@@ -546,8 +564,11 @@ def executar_passo_2(
     nome_motorista: str,
     placa: str,
     operacao: str = "",
+    frete_valor: str = "",
     artifacts_path: str | None = None,
+    tipo_operacao: str = "D2D",
 ) -> None:
+    handler = obter_operacao_handler(tipo_operacao)
     linha = LinhaAutomacao(
         numero=numero,
         nome_motorista=nome_motorista,
@@ -557,6 +578,7 @@ def executar_passo_2(
         operacao=operacao,
         frete_negociado=frete_negociado,
         excel_row=0,
+        frete_valor=frete_valor,
     )
 
     config = PlaywrightVPSConfig(headless=True, record_video_dir=artifacts_path)
@@ -580,6 +602,7 @@ def executar_passo_2(
             data_referencia=data_referencia,
             usuario=usuario,
             senha=senha,
+            operacao_handler=handler,
         )
 
 

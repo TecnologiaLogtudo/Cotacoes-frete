@@ -79,3 +79,4 @@ app_data/
 # Arquivos do sistema operacional
 .DS_Store
 Thumbs.db
+scratch/
