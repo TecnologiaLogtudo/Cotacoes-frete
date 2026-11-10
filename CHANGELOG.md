@@ -5,6 +5,15 @@ Todas as alterações notáveis neste projeto serão documentadas neste arquivo.
 ## [Unreleased] - 2026-11-10
 
 ### Corrigido
+- `Conectividade/playwright_vps_connect.py`:
+  - Remoção do header `"Upgrade-Insecure-Requests": "1"` das requisições automáticas do Playwright, prevenindo bloqueio por CORS pelo Google reCAPTCHA e recursos externos.
+- `automacao/steps/passo2_cotacoes.py`:
+  - Filtragem de ruídos e erros inofensivos de terceiros (`classificadores.json`, `recaptcha`, `ERR_FAILED`) nos ouvintes `page.on("console")` e `page.on("pageerror")`.
+- `automacao/api.py`:
+  - Em `get_job_status`, extração de `data_referencia` e `tipo_operacao` a partir dos metadados do job e dos logs gravados para garantir que `validar_planilha_previa` popule `frete_valor` e `frete_negociado` nas respostas de status durante e após a execução.
+- `web/src/App.jsx` & `web/src/styles.css`:
+  - Classificação refinada de logs no Console de Execução: mensagens vindas do navegador (`[browser]`) e avisos passam para o nível `WARN` (amarelo) ou `INFO`, reservando `ERROR` (vermelho) apenas para exceções e tracebacks do Python.
+  - Preservação acumulada de `frete_valor` e `frete_negociado` na lista de itens (`setItems`) do lote durante o polling contínuo.
 - `automacao/api.py` & `automacao/observabilidade.py`:
   - **Prevenção de execução fantasma após upload**: `_admin_status_from_job` e `get_job_status` agora retornam `status: "READY"` e `current_phase: "F1"` para lotes apenas validados e ainda não iniciados. Impede que o frontend interprete o lote recém-validado como "STARTED/RUNNING" e trave o botão de início.
   - **Novo endpoint de interrupção (`POST /api/jobs/{task_id}/stop` e `/cancel`)**: cancela a tarefa na fila do RQ e persiste o status `cancelled` no SQLite com log descritivo, impedindo que o polling reverta o cancelamento de volta para "Em andamento".

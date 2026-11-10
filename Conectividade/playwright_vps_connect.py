@@ -29,7 +29,6 @@ class PlaywrightVPSConfig:
             "Accept-Language": "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7",
             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
             "DNT": "1",
-            "Upgrade-Insecure-Requests": "1",
         }
     )
     record_video_dir: Optional[str] = None

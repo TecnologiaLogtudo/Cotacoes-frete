@@ -241,7 +241,17 @@ export default function App({ initialTab = 'execution' }) {
           }))
 
           if (statusData.items && Array.isArray(statusData.items) && statusData.items.length > 0) {
-            setItems(statusData.items)
+            setItems((prevItems) => {
+              return statusData.items.map((newItem, idx) => {
+                const prev = prevItems[idx] || prevItems.find((p) => String(p.reference) === String(newItem.reference)) || {}
+                return {
+                  ...prev,
+                  ...newItem,
+                  frete_valor: newItem.frete_valor || prev.frete_valor,
+                  frete_negociado: newItem.frete_negociado || prev.frete_negociado,
+                }
+              })
+            })
           } else if (updatedStatus === 'FAILED') {
             setItems((prevItems) =>
               prevItems.map((it) => ({
@@ -255,16 +265,30 @@ export default function App({ initialTab = 'execution' }) {
 
         if (logData && Array.isArray(logData.lines) && logData.lines.length > 0) {
           cursorRef.current = logData.next_cursor ?? cursorRef.current
-          const newEntries = logData.lines.map((text) => ({
-            timestamp: new Date().toLocaleTimeString('pt-BR', { hour12: false }),
-            level: text.toLowerCase().includes('erro') || text.toLowerCase().includes('exception')
-              ? 'ERROR'
-              : text.toLowerCase().includes('conclu') || text.toLowerCase().includes('sucesso')
-              ? 'SUCCESS'
-              : 'INFO',
-            phase: 'AUTO',
-            message: text,
-          }))
+          const newEntries = logData.lines.map((text) => {
+            const isBrowser = text.startsWith('[browser]')
+            const isSuccess = text.toLowerCase().includes('conclu') || text.toLowerCase().includes('sucesso')
+            const isRealError = !isBrowser && (text.toLowerCase().includes('erro') || text.toLowerCase().includes('exception') || text.toLowerCase().includes('traceback'))
+            const isWarning = text.toLowerCase().includes('aviso') || text.toLowerCase().includes('warning')
+
+            let level = 'INFO'
+            if (isRealError) {
+              level = 'ERROR'
+            } else if (isSuccess) {
+              level = 'SUCCESS'
+            } else if (isBrowser) {
+              level = text.toLowerCase().includes('error') || text.toLowerCase().includes('pageerror') ? 'WARN' : 'INFO'
+            } else if (isWarning) {
+              level = 'WARN'
+            }
+
+            return {
+              timestamp: new Date().toLocaleTimeString('pt-BR', { hour12: false }),
+              level,
+              phase: 'AUTO',
+              message: text,
+            }
+          })
           setLogs((prev) => [...prev, ...newEntries])
         }
       } catch (err) {}

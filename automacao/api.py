@@ -20,6 +20,7 @@ from automacao.planilha import (
 )
 from automacao.observabilidade import (
     _build_job_item,
+    _parse_log_lines,
     actions_for_job,
     artifact_file_path,
     artifacts_for_job,
@@ -508,9 +509,26 @@ def get_job_status(task_id: str) -> dict:
             if matching_files:
                 break
 
+    data_ref = None
+    tipo_op = "D2D"
+    if job and job.kwargs:
+        data_ref = job.kwargs.get("data_referencia")
+        tipo_op = job.kwargs.get("tipo_operacao") or "D2D"
+    if not data_ref:
+        lines = _parse_log_lines(real_task_id)
+        for l in lines:
+            if "data refer" in l.message.lower():
+                m = re.search(r"data refer[eê]ncia:\s*([^\s\|]+)", l.message, flags=re.IGNORECASE)
+                if m:
+                    data_ref = m.group(1).strip()
+            if "opera" in l.message.lower():
+                m = re.search(r"opera[cç][aã]o:\s*([^\s\|]+)", l.message, flags=re.IGNORECASE)
+                if m:
+                    tipo_op = m.group(1).strip()
+
     if matching_files:
         try:
-            val_res = validar_planilha_previa(matching_files[0])
+            val_res = validar_planilha_previa(matching_files[0], data_referencia=data_ref, tipo_operacao=tipo_op)
             items = val_res.get("preview", [])
         except Exception as e:
             logger.warning("Falha ao ler preview da planilha no status do job %s: %s", task_id, e)

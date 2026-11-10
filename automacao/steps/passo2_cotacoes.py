@@ -523,13 +523,20 @@ def executar_passo_2_lote(
 
         def _on_console(msg):
             try:
-                print(f"[browser] [{msg.type}] {msg.text}")
+                # Ignora avisos/erros de CORS e recursos estáticos de terceiros que não afetam a automação
+                txt = msg.text
+                if any(ign in txt for ign in ["classificadores.json", "recaptcha", "ERR_FAILED"]):
+                    return
+                print(f"[browser] [{msg.type}] {txt}")
             except Exception:
                 pass
 
         def _on_pageerror(err):
             try:
-                print(f"[browser] [pageerror] {err}")
+                err_str = str(err)
+                if any(ign in err_str for ign in ["classificadores.json", "recaptcha"]):
+                    return
+                print(f"[browser] [pageerror] {err_str}")
             except Exception:
                 pass
 
@@ -611,13 +618,20 @@ def executar_passo_2(
 
         def _on_console(msg):
             try:
-                print(f"[browser] [{msg.type}] {msg.text}")
+                # Ignora avisos/erros de CORS e recursos estáticos de terceiros que não afetam a automação
+                txt = msg.text
+                if any(ign in txt for ign in ["classificadores.json", "recaptcha", "ERR_FAILED"]):
+                    return
+                print(f"[browser] [{msg.type}] {txt}")
             except Exception:
                 pass
 
         def _on_pageerror(err):
             try:
-                print(f"[browser] [pageerror] {err}")
+                err_str = str(err)
+                if any(ign in err_str for ign in ["classificadores.json", "recaptcha"]):
+                    return
+                print(f"[browser] [pageerror] {err_str}")
             except Exception:
                 pass
 
