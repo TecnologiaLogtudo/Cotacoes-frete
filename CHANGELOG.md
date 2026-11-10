@@ -5,6 +5,15 @@ Todas as alterações notáveis neste projeto serão documentadas neste arquivo.
 ## [Unreleased] - 2026-11-10
 
 ### Corrigido
+- `automacao/api.py` & `automacao/observabilidade.py`:
+  - **Prevenção de execução fantasma após upload**: `_admin_status_from_job` e `get_job_status` agora retornam `status: "READY"` e `current_phase: "F1"` para lotes apenas validados e ainda não iniciados. Impede que o frontend interprete o lote recém-validado como "STARTED/RUNNING" e trave o botão de início.
+  - **Novo endpoint de interrupção (`POST /api/jobs/{task_id}/stop` e `/cancel`)**: cancela a tarefa na fila do RQ e persiste o status `cancelled` no SQLite com log descritivo, impedindo que o polling reverta o cancelamento de volta para "Em andamento".
+- `web/src/App.jsx` & `web/src/services/api.js`:
+  - **Fluxo de validação sem polling precoce**: ao enviar a planilha, o lote ativo recebe `status: 'READY'`. O hook de polling agora só inicia após o enfileiramento real no worker (com a presença de `task_id`), deixando o botão "Iniciar cotação" habilitado e o Lote Ativo como "Pronto".
+  - **Auto-seleção da data da planilha**: a data de referência é preenchida automaticamente a partir das datas válidas identificadas na validação da planilha (`report.available_dates`), caso o operador ainda não a tenha preenchido.
+  - **Interrupção efetiva**: o botão "Interromper" dispara `api.stopJob(activeId)` persistindo o cancelamento imediatamente no backend.
+- `tests/test_api_endpoints.py`:
+  - Adicionados testes `test_stop_job_endpoint` e `test_unstarted_job_status_ready`.
 - `automacao/observabilidade.py`:
   - **Resolução bidirecional de identificadores (`_resolve_task_ids`)**: `steps_for_job`, `actions_for_job`, `browser_logs_for_job` e `artifacts_for_job` agora consultam indistintamente tanto pelo `task_id` (UUID do RQ) quanto pelo `job_id` sequencial (ex.: `10112026-0001`), eliminando consultas vazias quando a interface envia o `job_id`.
   - **Enriquecimento de `_build_job_item`**: identificação dinâmica do nome original do arquivo na pasta de uploads ou nos logs (`filename`), contagem de linhas e progresso real (`total_items`, `total_lines`, `processed_lines`, `error_count`, `percent`), corrigindo o problema de lotes exibindo `ITENS 0/0` e nome genérico (`relatorio.xlsx`) no histórico.

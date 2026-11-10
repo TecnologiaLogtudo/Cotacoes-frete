@@ -450,9 +450,11 @@ def _admin_status_from_job(job: Job | None, log_lines: list[ParsedLogLine]) -> s
             return "completed"
         if raw in {"failed"}:
             return "error"
-        if raw in {"stopped", "canceled"}:
-            return "stopped"
-        if raw in {"queued", "deferred", "scheduled", "started"}:
+        if raw in {"stopped", "canceled", "cancelled"}:
+            return "cancelled"
+        if raw in {"queued", "deferred", "scheduled"}:
+            return "pending"
+        if raw in {"started"}:
             return "running"
 
     messages = [line.message.lower() for line in log_lines]
@@ -460,9 +462,11 @@ def _admin_status_from_job(job: Job | None, log_lines: list[ParsedLogLine]) -> s
         return "error"
     if any("job concluído com sucesso" in message or "job concluido com sucesso" in message for message in messages):
         return "completed"
+    if any("execução interrompida" in message or "execucao interrompida" in message or "cancelad" in message for message in messages):
+        return "cancelled"
     if messages:
         return "running"
-    return "running"
+    return "ready"
 
 
 def _job_datetime_from_log(log_lines: list[ParsedLogLine]) -> tuple[datetime | None, datetime | None]:

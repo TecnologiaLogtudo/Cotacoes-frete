@@ -168,3 +168,29 @@ def test_admin_steps_and_actions_by_job_id(client: TestClient):
     assert "percent" in j_item
 
 
+def test_stop_job_endpoint(client: TestClient):
+    from automacao.observabilidade import register_job_started
+    task_id = "test-stop-task-001"
+    register_job_started(task_id, job_id=task_id, username="operador_stop")
+
+    # Para o job via POST /api/jobs/{task_id}/stop
+    resp_stop = client.post(f"/api/jobs/{task_id}/stop")
+    assert resp_stop.status_code == 200
+    assert resp_stop.json()["status"] == "CANCELLED"
+
+    # Verifica status retornado
+    resp_status = client.get(f"/api/jobs/{task_id}")
+    assert resp_status.status_code == 200
+    assert resp_status.json()["status"] == "CANCELLED"
+
+
+def test_unstarted_job_status_ready(client: TestClient):
+    # Um ID desconhecido sem logs e sem RQ deve retornar READY e F1
+    resp = client.get("/api/jobs/job-inexistente-12345")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["status"] == "READY"
+    assert data["current_phase"] == "F1"
+
+
+

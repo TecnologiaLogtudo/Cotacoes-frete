@@ -136,6 +136,20 @@ export const api = {
     })
   },
 
+  async stopJob(jobId) {
+    if (mockMode) {
+      const target = mockJobs.find((j) => j.id === jobId)
+      if (target) {
+        target.status = 'CANCELLED'
+      }
+      return { status: 'CANCELLED', task_id: jobId }
+    }
+
+    return request(`/api/jobs/${encodeURIComponent(jobId)}/stop`, {
+      method: 'POST',
+    })
+  },
+
   async getJob(id) {
     if (mockMode) {
       const job = mockJobs.find((j) => j.id === id) || mockJobs[0] || null

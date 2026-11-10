@@ -17,6 +17,7 @@ const LS_KEYS = {
 }
 
 const statusMap = {
+  READY: { label: 'Pronto', tone: '' },
   PENDING: { label: 'Aguardando', tone: '' },
   STARTED: { label: 'Em execução', tone: 'running' },
   RUNNING: { label: 'Em execução', tone: 'running' },
@@ -35,6 +36,7 @@ function normalizeStatus(st) {
   if (u === 'STARTED') return 'RUNNING'
   if (u === 'SUCCESS') return 'COMPLETED'
   if (u === 'FAILURE') return 'FAILED'
+  if (u === 'READY' || u === 'PRONTO') return 'READY'
   return u
 }
 
@@ -211,8 +213,10 @@ export default function App({ initialTab = 'execution' }) {
 
   // Polling ativo do lote em execução
   useEffect(() => {
-    const activeId = activeJob?.task_id || activeJob?.id || activeJob?.job_id
-    if (!activeId) return
+    // SÓ faz polling se tiver task_id real (ou seja, foi enfileirado para execução)
+    // Se estiver em READY ou sem task_id, o lote só foi validado e está aguardando o usuário clicar em "Iniciar cotação"
+    const activeTaskId = activeJob?.task_id
+    if (!activeTaskId || activeJob?.status === 'READY') return
 
     const normalizedSt = normalizeStatus(activeJob?.status)
     const isRunning = normalizedSt === 'RUNNING' || normalizedSt === 'PENDING'
@@ -220,8 +224,8 @@ export default function App({ initialTab = 'execution' }) {
     const poll = async () => {
       try {
         const [statusData, logData] = await Promise.all([
-          api.getJob(activeId),
-          api.getJobLogs(activeId, cursorRef.current),
+          api.getJob(activeTaskId),
+          api.getJobLogs(activeTaskId, cursorRef.current),
         ])
 
         if (statusData) {
@@ -312,11 +316,20 @@ export default function App({ initialTab = 'execution' }) {
       if (report.preview && report.preview.length > 0) {
         setItems(report.preview)
       }
+      if (report.available_dates && report.available_dates.length > 0 && !dataReferencia) {
+        const d = report.available_dates[0]
+        if (d && d.includes('/')) {
+          const [day, month, year] = d.split('/')
+          setDataReferencia(`${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`)
+        } else if (d) {
+          setDataReferencia(d)
+        }
+      }
       setActiveJob({
         id: report.job_id,
         job_id: report.job_id,
         filename: report.filename,
-        status: 'PENDING',
+        status: 'READY',
         current_phase: 'F1',
         percent: 0,
         total_items: report.total_rows || 0,
@@ -383,7 +396,8 @@ export default function App({ initialTab = 'execution' }) {
     }
   }
 
-  const handleStop = () => {
+  const handleStop = async () => {
+    const activeId = activeJob?.task_id || activeJob?.id || activeJob?.job_id
     if (activeJob) {
       setActiveJob((prev) => ({ ...prev, status: 'CANCELLED' }))
       setLogs((prev) => [
@@ -395,7 +409,15 @@ export default function App({ initialTab = 'execution' }) {
           message: 'Execução interrompida pelo operador.',
         },
       ])
+      if (activeId) {
+        try {
+          await api.stopJob(activeId)
+        } catch (err) {
+          console.error('Falha ao parar job no backend:', err)
+        }
+      }
       notify('Execução cancelada.')
+      refreshHistory()
     }
   }
 

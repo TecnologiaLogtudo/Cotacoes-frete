@@ -437,16 +437,20 @@ def get_job_status(task_id: str) -> dict:
     serialized = serialize_job_result(job)
 
     db_status = (db_item.get("status") or "").lower() if db_item else ""
-    if db_status == "error":
+    if db_status in ("error", "failed"):
         final_status = "FAILURE"
-    elif db_status == "completed":
+    elif db_status in ("completed", "success"):
         final_status = "SUCCESS"
-    elif serialized.get("status") and serialized["status"] != "PENDING":
+    elif db_status in ("cancelled", "canceled", "stopped"):
+        final_status = "CANCELLED"
+    elif db_status in ("ready", "idle"):
+        final_status = "READY"
+    elif serialized.get("status") and serialized["status"] not in ("PENDING", "UNKNOWN", "ready"):
         final_status = serialized["status"]
     elif db_status == "running":
         final_status = "STARTED"
     else:
-        final_status = serialized.get("status") or "PENDING"
+        final_status = "READY" if not job and not db_status else (serialized.get("status") or "PENDING")
 
     # Percentual de 0 a 100
     total_lines = progress["total_lines"]
@@ -456,6 +460,13 @@ def get_job_status(task_id: str) -> dict:
     else:
         percent = 100 if final_status in ("SUCCESS", "COMPLETED") else 0
 
+    if final_status in ("SUCCESS", "COMPLETED"):
+        current_phase = "F5"
+    elif final_status in ("READY", "IDLE"):
+        current_phase = "F1"
+    else:
+        current_phase = "F3"
+
     payload: dict = {
         "task_id": real_task_id,
         "job_id": task_id,
@@ -463,7 +474,7 @@ def get_job_status(task_id: str) -> dict:
         "processed_lines": processed_lines,
         "total_lines": total_lines,
         "percent": percent,
-        "current_phase": "F5" if final_status in ("SUCCESS", "COMPLETED") else "F3",
+        "current_phase": current_phase,
     }
 
     if "result" in serialized:
@@ -517,6 +528,38 @@ def get_job_status(task_id: str) -> dict:
 
     payload["items"] = items
     return payload
+
+
+@app.post("/api/jobs/{task_id}/stop")
+@app.post("/api/jobs/{task_id}/cancel")
+def stop_job(task_id: str) -> dict:
+    from automacao.observabilidade import _resolve_task_ids, _upsert_job, _now_iso, register_job_message
+    from rq.job import Job
+    resolved = _resolve_task_ids(task_id)
+    # Tenta cancelar no RQ
+    try:
+        from automacao.queue import get_redis_connection
+        conn = get_redis_connection()
+        for tid in resolved:
+            try:
+                rq_job = Job.fetch(tid, connection=conn)
+                if rq_job:
+                    rq_job.cancel()
+                    rq_job.delete()
+            except Exception:
+                pass
+    except Exception:
+        pass
+
+    # Atualiza SQLite
+    for tid in resolved:
+        _upsert_job(task_id=tid, status="cancelled", ended_at=_now_iso())
+        try:
+            register_job_message(tid, "Execução interrompida pelo operador.")
+        except Exception:
+            pass
+
+    return {"status": "CANCELLED", "task_id": task_id}
 
 
 @app.get("/api/jobs/{task_id}/logs")
