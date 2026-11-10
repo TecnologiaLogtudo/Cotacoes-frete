@@ -1,12 +1,35 @@
-const rawBase = (import.meta.env.VITE_API_BASE_URL || '').trim()
-const prefix = rawBase === '/' ? '' : rawBase.replace(/\/+$/, '')
+function resolveApiPrefix() {
+  const explicit = (import.meta.env.VITE_API_BASE_URL || '').trim()
+  if (explicit) {
+    return explicit === '/' ? '' : explicit.replace(/\/+$/, '')
+  }
+
+  const base = (import.meta.env.BASE_URL || '').trim()
+  if (base && base !== '/') {
+    return base.replace(/\/+$/, '')
+  }
+
+  if (typeof window !== 'undefined' && window.location?.pathname) {
+    const match = window.location.pathname.match(/^(\/[^/]+)/)
+    if (match && match[1] !== '/api') {
+      return match[1]
+    }
+  }
+
+  return ''
+}
+
+const prefix = resolveApiPrefix()
 const mockMode = import.meta.env.VITE_USE_MOCK_API === 'true'
 
 const mockJobs = []
 let mockConfig = { throttleSeconds: 2.5, headless: true }
 
 async function request(path, options = {}) {
-  const url = `${prefix}${path.startsWith('/') ? path : `/${path}`}`
+  const normalizedPath = path.startsWith('/') ? path : `/${path}`
+  const url = prefix && !normalizedPath.startsWith(prefix)
+    ? `${prefix}${normalizedPath}`
+    : normalizedPath
   const response = await fetch(url, options)
   if (!response.ok) {
     let message = `Falha na requisição HTTP (${response.status})`

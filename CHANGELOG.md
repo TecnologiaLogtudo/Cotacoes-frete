@@ -2,7 +2,12 @@
 
 Todas as alterações notáveis neste projeto serão documentadas neste arquivo.
 
-## [Unreleased] - 2026-11-09
+## [Unreleased] - 2026-11-10
+
+### Corrigido
+- `web/src/services/api.js`: Resolução automática e resiliente do prefixo da API (`resolveApiPrefix`), compatível com subpath reverso (`/cotacoes/`). Corrige erro 404 (`API route not found`) que impedia o carregamento do histórico, das métricas do admin e a renderização dos dados validados ao subir a planilha. Proteção contra duplicação de prefixos na função `request`.
+
+## [1.0.0] - 2026-11-09
 
 ### Adicionado
 - **Skill `web-automation-interface`**: Reformulação completa da interface operacional web baseada em job/lote e tokens semânticos.
