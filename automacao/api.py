@@ -19,6 +19,7 @@ from automacao.planilha import (
     carregar_linhas_para_automacao,
 )
 from automacao.observabilidade import (
+    _build_job_item,
     actions_for_job,
     artifact_file_path,
     artifacts_for_job,
@@ -414,6 +415,7 @@ def get_jobs_list(limit: int = 100, status: str | None = None) -> dict:
 def get_job_status(task_id: str) -> dict:
     job = fetch_job(task_id)
     real_task_id = task_id
+    db_item = None
     if job is None:
         all_jobs = list_jobs()
         for j in all_jobs:
@@ -422,28 +424,98 @@ def get_job_status(task_id: str) -> dict:
                 if candidate:
                     real_task_id = candidate
                     job = fetch_job(candidate)
+                    db_item = j
                     break
+
+    if db_item is None:
+        try:
+            db_item = _build_job_item(real_task_id)
+        except Exception:
+            db_item = None
 
     progress = parse_progress_from_log(real_task_id)
     serialized = serialize_job_result(job)
 
+    db_status = (db_item.get("status") or "").lower() if db_item else ""
+    if db_status == "error":
+        final_status = "FAILURE"
+    elif db_status == "completed":
+        final_status = "SUCCESS"
+    elif serialized.get("status") and serialized["status"] != "PENDING":
+        final_status = serialized["status"]
+    elif db_status == "running":
+        final_status = "STARTED"
+    else:
+        final_status = serialized.get("status") or "PENDING"
+
+    # Percentual de 0 a 100
+    total_lines = progress["total_lines"]
+    processed_lines = progress["processed_lines"]
+    if total_lines and total_lines > 0:
+        percent = min(100, int(round((processed_lines / total_lines) * 100)))
+    else:
+        percent = 100 if final_status in ("SUCCESS", "COMPLETED") else 0
+
     payload: dict = {
         "task_id": real_task_id,
         "job_id": task_id,
-        "status": serialized["status"],
-        "processed_lines": progress["processed_lines"],
-        "total_lines": progress["total_lines"],
+        "status": final_status,
+        "processed_lines": processed_lines,
+        "total_lines": total_lines,
+        "percent": percent,
+        "current_phase": "F5" if final_status in ("SUCCESS", "COMPLETED") else "F3",
     }
-    if progress["total_lines"] and progress["total_lines"] > 0:
-        payload["percent"] = round(progress["processed_lines"] / progress["total_lines"], 2)
-    else:
-        payload["percent"] = 1.0 if serialized["status"] in ("SUCCESS", "COMPLETED") else 0.0
 
     if "result" in serialized:
         payload["result"] = serialized["result"]
-    if "error" in serialized:
-        payload["error"] = serialized["error"]
 
+    # Extrai mensagem de erro detalhada
+    if "error" in serialized and serialized["error"]:
+        payload["error"] = serialized["error"]
+    elif final_status == "FAILURE":
+        actions = actions_for_job(real_task_id)
+        for act in reversed(actions):
+            desc = act.get("action_type") or act.get("description") or act.get("action") or ""
+            if "[usuario]" in desc:
+                payload["error"] = desc.replace("[usuario]", "").strip()
+                break
+            elif "ERRO" in desc or "erro" in desc.lower():
+                payload["error"] = desc.strip()
+        if "error" not in payload:
+            payload["error"] = "Falha durante o processamento da automação."
+
+    # Busca a planilha do lote para extrair itens e seus status
+    items = []
+    lookup_ids = [task_id, real_task_id]
+    if db_item and db_item.get("job_id"):
+        lookup_ids.append(db_item["job_id"])
+
+    matching_files = []
+    for lid in lookup_ids:
+        if lid:
+            matching_files = list(uploads_dir().glob(f"{lid}_*"))
+            if matching_files:
+                break
+
+    if matching_files:
+        try:
+            val_res = validar_planilha_previa(matching_files[0])
+            items = val_res.get("preview", [])
+        except Exception as e:
+            logger.warning("Falha ao ler preview da planilha no status do job %s: %s", task_id, e)
+
+    if items:
+        if final_status == "FAILURE":
+            err_msg = payload.get("error") or "Falha no processamento deste registro."
+            for it in items:
+                it["status"] = "FAILED"
+                it["message"] = err_msg
+        elif final_status in ("SUCCESS", "COMPLETED"):
+            for it in items:
+                it["status"] = "SUCCESS"
+                it["message"] = "Processado com sucesso"
+
+    payload["items"] = items
     return payload
 
 

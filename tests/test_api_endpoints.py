@@ -105,3 +105,19 @@ def test_prefix_cotacoes_rewrite(client: TestClient):
     resp_ops = client.get("/cotacoes/api/operacoes")
     assert resp_ops.status_code == 200
     assert "items" in resp_ops.json()
+
+
+def test_get_job_status_failed_job_observabilidade(client: TestClient):
+    from automacao.observabilidade import register_job_failed, register_job_started
+    task_id = "test-fail-task-001"
+    register_job_started(task_id, job_id=task_id, username="test_user")
+    register_job_failed(task_id, user_error="Nao foi encontrada opcao de remetente para a cidade/base: PORTO SEGURO")
+
+    resp = client.get(f"/api/jobs/{task_id}")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["status"] == "FAILURE"
+    assert "PORTO SEGURO" in data.get("error", "")
+    assert data["current_phase"] == "F3"
+    assert "items" in data
+

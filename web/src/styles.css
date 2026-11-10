@@ -1041,6 +1041,10 @@ tbody tr:hover {
   transition: width 0.3s ease;
 }
 
+.batch-progress-fill-primary.error {
+  background: linear-gradient(90deg, #dc2626 0%, #ef4444 100%) !important;
+}
+
 .batch-progress-bar-secondary {
   height: 3px;
   background: rgba(255, 255, 255, 0.04);
@@ -1054,6 +1058,10 @@ tbody tr:hover {
   background: rgba(56, 189, 248, 0.6);
   border-radius: 2px;
   transition: width 0.3s ease;
+}
+
+.batch-progress-fill-secondary.error {
+  background: rgba(239, 68, 68, 0.6) !important;
 }
 
 /* Subcabeçalho de cotação em processamento */
@@ -1136,6 +1144,13 @@ tbody tr:hover {
   color: #93c5fd;
 }
 
+.phase-step-col.failed .phase-step-circle {
+  background: #7f1d1d !important;
+  border-color: #ef4444 !important;
+  color: #ffffff !important;
+  box-shadow: 0 0 12px rgba(239, 68, 68, 0.5) !important;
+}
+
 .phase-step-info {
   display: flex;
   flex-direction: column;
@@ -1158,10 +1173,19 @@ tbody tr:hover {
   color: #93c5fd;
 }
 
+.phase-step-col.failed .phase-step-title {
+  color: #ef4444 !important;
+  font-weight: 700;
+}
+
 .phase-step-sub {
   font-size: 10.5px;
   color: #64748b;
   line-height: 1.3;
+}
+
+.phase-step-col.failed .phase-step-sub {
+  color: #fca5a5 !important;
 }
 
 /* ==========================================================================
@@ -1177,8 +1201,8 @@ tbody tr:hover {
   flex-direction: column;
   padding: 0;
   overflow: hidden;
-  min-height: 480px;
-  height: auto;
+  height: 500px;
+  max-height: 500px;
   background: #090d16;
 }
 
@@ -1264,13 +1288,34 @@ tbody tr:hover {
 
 .terminal-content-viewport {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
+  overflow-x: hidden;
   padding: 14px 16px;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: 11.5px;
   line-height: 1.6;
   display: flex;
   flex-direction: column;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+}
+
+.terminal-content-viewport::-webkit-scrollbar {
+  width: 6px;
+}
+
+.terminal-content-viewport::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.terminal-content-viewport::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 9999px;
+}
+
+.terminal-content-viewport::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.35);
 }
 
 .terminal-empty-msg {
@@ -1317,8 +1362,8 @@ tbody tr:hover {
   flex-direction: column;
   padding: 0;
   overflow: hidden;
-  min-height: 480px;
-  height: auto;
+  height: 500px;
+  max-height: 500px;
 }
 
 .batch-items-header {
@@ -1366,7 +1411,28 @@ tbody tr:hover {
 .batch-table-container {
   overflow-y: auto;
   overflow-x: auto;
-  max-height: 280px;
+  flex: 1;
+  min-height: 0;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+}
+
+.batch-table-container::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.batch-table-container::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.batch-table-container::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 9999px;
+}
+
+.batch-table-container::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.35);
 }
 
 .batch-items-table {

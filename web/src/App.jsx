@@ -233,7 +233,20 @@ export default function App({ initialTab = 'execution' }) {
             processed_lines: statusData.processed_lines ?? statusData.job?.processed_lines ?? prev?.processed_lines ?? 0,
             total_lines: statusData.total_lines ?? statusData.job?.total_lines ?? prev?.total_lines,
             current_phase: statusData.current_phase ?? statusData.job?.current_phase ?? (updatedStatus === 'COMPLETED' ? 'F5' : 'F3'),
+            error: statusData.error || statusData.job?.error || prev?.error,
           }))
+
+          if (statusData.items && Array.isArray(statusData.items) && statusData.items.length > 0) {
+            setItems(statusData.items)
+          } else if (updatedStatus === 'FAILED') {
+            setItems((prevItems) =>
+              prevItems.map((it) => ({
+                ...it,
+                status: 'FAILED',
+                message: statusData.error || it.message || 'Falha na execução da cotação',
+              }))
+            )
+          }
         }
 
         if (logData && Array.isArray(logData.lines) && logData.lines.length > 0) {
@@ -681,8 +694,8 @@ export default function App({ initialTab = 'execution' }) {
                   <div className="batch-header-line">
                     <div className="batch-header-left">
                       <span className="batch-label">LOTE ATIVO</span>
-                      <span className={`batch-status-pill ${isJobRunning ? 'running' : normalizedActiveStatus === 'COMPLETED' ? 'completed' : 'ready'}`}>
-                        {isJobRunning ? 'Em andamento' : normalizedActiveStatus === 'COMPLETED' ? 'Concluído' : 'Pronto'}
+                      <span className={`batch-status-pill ${isJobRunning ? 'running' : normalizedActiveStatus === 'COMPLETED' ? 'completed' : normalizedActiveStatus === 'FAILED' ? 'failed' : 'ready'}`}>
+                        {isJobRunning ? 'Em andamento' : normalizedActiveStatus === 'COMPLETED' ? 'Concluído' : normalizedActiveStatus === 'FAILED' ? 'Falhou' : 'Pronto'}
                       </span>
                       <span className="batch-id mono">
                         {String(activeJob?.job_id || validationReport?.job_id || '—')}
@@ -695,7 +708,7 @@ export default function App({ initialTab = 'execution' }) {
                     <div className="batch-items-count">
                       {activeJob?.processed_lines || 0}/{activeJob?.total_items || validationReport?.total_rows || items.length || 0} itens ({items.filter(i => (i.status === 'FAILED' || i.status === 'ERROR')).length} falhas)
                     </div>
-                    <div className="batch-percent-val">
+                    <div className="batch-percent-val" style={{ color: normalizedActiveStatus === 'FAILED' ? '#ef4444' : undefined }}>
                       {activeJob?.percent || 0}%
                     </div>
                   </div>
@@ -705,16 +718,16 @@ export default function App({ initialTab = 'execution' }) {
                     {/* Barra 1: Progresso Geral dos Itens */}
                     <div className="batch-progress-bar-primary">
                       <div
-                        className="batch-progress-fill-primary"
-                        style={{ width: `${activeJob?.percent || 0}%` }}
+                        className={`batch-progress-fill-primary ${normalizedActiveStatus === 'FAILED' ? 'error' : ''}`}
+                        style={{ width: `${normalizedActiveStatus === 'FAILED' ? 100 : (activeJob?.percent || 0)}%` }}
                       />
                     </div>
                     {/* Barra 2: Progresso das Fases (F1 a F5) */}
                     <div className="batch-progress-bar-secondary">
                       <div
-                        className="batch-progress-fill-secondary"
+                        className={`batch-progress-fill-secondary ${normalizedActiveStatus === 'FAILED' ? 'error' : ''}`}
                         style={{
-                          width: `${Math.min(100, Math.max(15, ((Math.max(0, cfg.phases.findIndex((x) => x.id === (activeJob?.current_phase || 'F1'))) + (isJobRunning ? 0.5 : 1)) / cfg.phases.length) * 100))}%`
+                          width: `${normalizedActiveStatus === 'FAILED' ? 100 : Math.min(100, Math.max(15, ((Math.max(0, cfg.phases.findIndex((x) => x.id === (activeJob?.current_phase || 'F1'))) + (isJobRunning ? 0.5 : 1)) / cfg.phases.length) * 100))}%`
                         }}
                       />
                     </div>
@@ -722,9 +735,15 @@ export default function App({ initialTab = 'execution' }) {
 
                   {/* COTAÇÃO EM PROCESSAMENTO — */}
                   <div className="batch-processing-subhead">
-                    <span>COTAÇÃO EM PROCESSAMENTO</span>
-                    <span className="batch-processing-item">
-                      — {isJobRunning ? (items.find(i => i.status === 'RUNNING')?.nome || 'Processando itens…') : ''}
+                    <span style={{ color: normalizedActiveStatus === 'FAILED' ? '#ef4444' : undefined }}>
+                      {normalizedActiveStatus === 'FAILED' ? 'COTAÇÃO INTERROMPIDA POR ERRO' : 'COTAÇÃO EM PROCESSAMENTO'}
+                    </span>
+                    <span className="batch-processing-item" style={{ color: normalizedActiveStatus === 'FAILED' ? '#fca5a5' : undefined }}>
+                      {normalizedActiveStatus === 'FAILED'
+                        ? (activeJob?.error ? `— ${activeJob.error}` : '— Ocorreu uma falha no processamento')
+                        : isJobRunning
+                        ? (items.find(i => i.status === 'RUNNING')?.nome || '— Processando itens…')
+                        : ''}
                     </span>
                   </div>
 
@@ -739,18 +758,19 @@ export default function App({ initialTab = 'execution' }) {
                         )
                         const isDone = idx < currentIdx || normalizedActiveStatus === 'COMPLETED'
                         const isCurrent = idx === currentIdx
+                        const isFailedPhase = normalizedActiveStatus === 'FAILED' && isCurrent
 
                         return (
                           <div
                             key={p.id}
-                            className={`phase-step-col ${isDone ? 'done' : isCurrent ? 'current' : ''}`}
+                            className={`phase-step-col ${isFailedPhase ? 'failed' : isDone ? 'done' : isCurrent ? 'current' : ''}`}
                           >
                             <div className="phase-step-circle">
-                              {p.id}
+                              {isFailedPhase ? '✕' : p.id}
                             </div>
                             <div className="phase-step-info">
                               <span className="phase-step-title">{p.title}</span>
-                              <span className="phase-step-sub">{p.subtitle}</span>
+                              <span className="phase-step-sub">{isFailedPhase ? 'Falhou' : p.subtitle}</span>
                             </div>
                           </div>
                         )
@@ -1364,6 +1384,16 @@ function HistoryJobDetailModal({ job, onClose, onOpenScreenshot }) {
       } else if (job.items && Array.isArray(job.items) && job.items.length > 0) {
         loadedItems = job.items
       }
+
+      const isJobFailed = statusMeta.tone === 'failed' || String(job.status || '').toLowerCase() === 'error' || String(job.status || '').toUpperCase() === 'FAILED' || String(job.status || '').toUpperCase() === 'FAILURE' || String(jobRes?.status || '').toUpperCase() === 'FAILURE'
+
+      if (loadedItems.length > 0 && isJobFailed) {
+        loadedItems = loadedItems.map((it) => ({
+          ...it,
+          status: it.status && it.status !== 'PENDING' ? it.status : 'FAILED',
+          message: it.message || jobRes?.error || 'Falha na execução',
+        }))
+      }
       setItems(loadedItems)
 
       // Artefatos reais do lote
@@ -1407,14 +1437,18 @@ function HistoryJobDetailModal({ job, onClose, onOpenScreenshot }) {
     return s.includes('CONCLU') || s.includes('SUCC') || s.includes('OK')
   }).length
 
-  const countError = job.error_count ?? items.filter((i) => {
-    const s = String(i.status || '').toUpperCase()
-    return s.includes('FAIL') || s.includes('FALHA') || s.includes('ERR')
-  }).length
+  const isJobFailed = statusMeta.tone === 'failed' || String(job.status || '').toLowerCase() === 'error' || String(job.status || '').toUpperCase() === 'FAILED' || String(job.status || '').toUpperCase() === 'FAILURE'
+
+  const countError = job.error_count ?? (
+    items.filter((i) => {
+      const s = String(i.status || '').toUpperCase()
+      return s.includes('FAIL') || s.includes('FALHA') || s.includes('ERR')
+    }).length || (isJobFailed ? Math.max(1, items.length) : 0)
+  )
 
   const countPending = job.pending_count ?? items.filter((i) => {
     const s = String(i.status || '').toUpperCase()
-    return s.includes('PEND') || s.includes('AGUARD')
+    return (s.includes('PEND') || s.includes('AGUARD')) && !s.includes('FAIL') && !s.includes('ERR')
   }).length
 
   const handleArtifactClick = (art) => {

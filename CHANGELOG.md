@@ -5,7 +5,21 @@ Todas as alterações notáveis neste projeto serão documentadas neste arquivo.
 ## [Unreleased] - 2026-11-10
 
 ### Corrigido
+- `automacao/api.py`:
+  - Corrigida a extração de mensagens de erro detalhadas em `get_job_status` a partir dos eventos em `job_actions` (`action_type`) registrados na observabilidade SQLite, permitindo que exceções do robô (ex: `Nao foi encontrada opcao de remetente para a cidade/base: PORTO SEGURO`) sejam devolvidas diretamente ao frontend.
+  - Sincronização do status dos itens do lote na resposta de `/api/jobs/{task_id}`: leitura da planilha correspondente no diretório de uploads e atribuição de `status: FAILED` e mensagem explicativa a todos os itens pendentes quando o job encerra com erro.
+- `automacao/queue.py`:
+  - Adicionado tratamento resiliente em `fetch_job` contra `ConnectionError` e outras exceções quando o Redis estiver inacessível, caindo suavemente para o fallback SQLite.
+- `web/src/App.jsx`:
+  - Finalização reativa e imediata do lote no frontend ao receber erro da automação: a régua de progresso ganha indicador visual de falha, a fase ativa (F3) transiciona para o estado comemorativo de erro (vermelho com ícone `✕` e rótulo `Falhou`), e o subhead exibe em destaque o motivo da interrupção (`COTAÇÃO INTERROMPIDA POR ERRO — [motivo]`).
+  - Atualização do bloco **Itens do Lote** para refletir os itens com badge `Falhou` e mensagem de erro específica.
+  - Atualização do modal de detalhes do histórico (`HistoryDetailModal`) para mapear itens de lotes falhados para `FAILED`, populando corretamente os contadores KPI de `ERROS`, `CONCLUÍDOS` e `PENDENTES`.
+- `web/src/styles.css`:
+  - Adicionadas classes e variantes de erro para barras de progresso (`.batch-progress-fill-primary.error`, `.batch-progress-fill-secondary.error`), fases (`.phase-step-col.failed`) e badges (`.batch-status-pill.failed`).
+  - Fixada a altura máxima do **Console de Execução** (`.terminal-execution-card`) e de **Itens do Lote** (`.batch-items-card`) em `500px` com `min-height: 0` e `overflow-y: auto`, ativando o scroll vertical e impedindo que o console cresça indefinidamente para baixo com a chegada de novos logs. Adicionada estilização de scrollbar escura/sutil.
 - `web/src/services/api.js`: Resolução automática e resiliente do prefixo da API (`resolveApiPrefix`), compatível com subpath reverso (`/cotacoes/`). Corrige erro 404 (`API route not found`) que impedia o carregamento do histórico, das métricas do admin e a renderização dos dados validados ao subir a planilha. Proteção contra duplicação de prefixos na função `request`.
+- `tests/test_api_endpoints.py`:
+  - Adicionado teste `test_get_job_status_failed_job_observabilidade` validando recuperação de falhas via observabilidade SQLite, extração do erro de remetente e integridade dos campos devolvidos pela API.
 
 ## [1.0.0] - 2026-11-09
 

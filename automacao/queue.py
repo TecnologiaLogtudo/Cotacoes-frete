@@ -58,7 +58,7 @@ def enqueue_cotacao_job(
 def fetch_job(task_id: str) -> Job | None:
     try:
         return Job.fetch(task_id, connection=get_redis_connection())
-    except NoSuchJobError:
+    except Exception:
         return None
 
 
