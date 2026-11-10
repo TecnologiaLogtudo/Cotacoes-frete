@@ -21,7 +21,7 @@ from rq.registry import (
     StartedJobRegistry,
 )
 
-from automacao.job_io import jobs_dir, task_log_path, uploads_dir
+from automacao.job_io import jobs_dir, parse_progress_from_log, task_log_path, uploads_dir
 
 
 ARTIFACT_TYPE_BY_EXTENSION = {
@@ -548,6 +548,28 @@ def next_job_id() -> str:
         return f"{date_key}-0000"
 
 
+def _resolve_task_ids(identifier: str) -> list[str]:
+    """Retorna todos os IDs associados ao job/tarefa (task_id e job_id)."""
+    if not identifier:
+        return []
+    ids: set[str] = {str(identifier)}
+    _ensure_schema()
+    try:
+        with _db_connect() as conn:
+            rows = conn.execute(
+                "SELECT task_id, job_id FROM jobs WHERE task_id = ? OR job_id = ?",
+                (identifier, identifier),
+            ).fetchall()
+            for r in rows:
+                if r["task_id"]:
+                    ids.add(str(r["task_id"]))
+                if r["job_id"]:
+                    ids.add(str(r["job_id"]))
+    except Exception:
+        pass
+    return list(ids)
+
+
 def _collect_known_task_ids() -> list[str]:
     task_ids: set[str] = set()
 
@@ -581,13 +603,6 @@ def _collect_known_task_ids() -> list[str]:
                     ids = []
                 for job_id in ids:
                     task_ids.add(job_id)
-
-            # fallback para jobs com metadados em redis fora das registries
-            for key in connection.scan_iter(match="rq:job:*"):
-                key_text = key.decode() if isinstance(key, bytes) else str(key)
-                task_id = key_text.rsplit(":", 1)[-1]
-                if task_id:
-                    task_ids.add(task_id)
     except Exception:
         pass
 
@@ -596,76 +611,144 @@ def _collect_known_task_ids() -> list[str]:
 
 def _build_job_item(task_id: str) -> dict[str, Any]:
     _ensure_schema()
+    db_row = None
     try:
         with _db_connect() as conn:
-            row = conn.execute(
-                "SELECT task_id, job_id, status, username, ip, started_at, ended_at, duration_sec FROM jobs WHERE task_id = ?",
-                (task_id,),
+            db_row = conn.execute(
+                "SELECT task_id, job_id, status, username, ip, started_at, ended_at, duration_sec FROM jobs WHERE task_id = ? OR job_id = ?",
+                (task_id, task_id),
             ).fetchone()
-        if row:
-            return {
-                "id": row["task_id"],
-                "task_id": row["task_id"],
-                "job_id": row["job_id"],
-                "status": row["status"] or "running",
-                "username": row["username"],
-                "ip": row["ip"],
-                "started_at": row["started_at"],
-                "ended_at": row["ended_at"],
-                "duration_sec": row["duration_sec"],
-            }
     except Exception:
         logger.exception("Falha ao carregar job do SQLite | task_id=%s", task_id)
 
+    job_id = db_row["job_id"] if db_row else None
+    real_task_id = db_row["task_id"] if db_row else task_id
+    status = db_row["status"] if db_row else None
+    username = db_row["username"] if db_row else None
+    ip = db_row["ip"] if db_row else None
+    started_at_str = db_row["started_at"] if db_row else None
+    ended_at_str = db_row["ended_at"] if db_row else None
+    duration_sec = db_row["duration_sec"] if db_row else None
+
     try:
         _, connection = _queue_handles()
-        job = Job.fetch(task_id, connection=connection) if connection else None
+        job = Job.fetch(real_task_id, connection=connection) if connection else None
+        if not job and job_id:
+            job = Job.fetch(job_id, connection=connection) if connection else None
     except Exception:
         job = None
 
-    log_lines = _parse_log_lines(task_id)
+    log_lines = _parse_log_lines(real_task_id)
+    if not log_lines and job_id:
+        log_lines = _parse_log_lines(job_id)
+
     log_started_at, log_ended_at = _job_datetime_from_log(log_lines)
 
-    username = None
-    ip = None
-    started_at = None
-    ended_at = None
-    rq_job_id = None
-
     if job:
-        username = job.kwargs.get("usuario")
-        rq_job_id = job.kwargs.get("job_id")
-        ip = job.meta.get("client_ip")
-        started_at = _parse_dt(job.started_at) or _parse_dt(job.enqueued_at)
-        ended_at = _parse_dt(job.ended_at)
+        username = username or job.kwargs.get("usuario")
+        job_id = job_id or job.kwargs.get("job_id")
+        ip = ip or job.meta.get("client_ip")
+        if not started_at_str:
+            started_at_str = _to_iso(_parse_dt(job.started_at) or _parse_dt(job.enqueued_at))
+        if not ended_at_str:
+            ended_at_str = _to_iso(_parse_dt(job.ended_at))
 
-    if not started_at:
-        started_at = log_started_at
-    if not ended_at:
-        ended_at = log_ended_at
+    if not started_at_str and log_started_at:
+        started_at_str = _to_iso(log_started_at)
+    if not ended_at_str and log_ended_at:
+        ended_at_str = _to_iso(log_ended_at)
 
-    duration_sec = _safe_duration_seconds(started_at, ended_at)
-    status = _admin_status_from_job(job, log_lines)
+    if not status or status in ("running", "started"):
+        status = _admin_status_from_job(job, log_lines)
+
+    # Identifica nome do arquivo
+    filename = None
+    lookup_ids = [job_id, real_task_id]
+    matching_upload = None
+    for lid in lookup_ids:
+        if lid:
+            matches = list(uploads_dir().glob(f"{lid}_*"))
+            if matches:
+                matching_upload = matches[0]
+                break
+
+    if matching_upload:
+        parts = matching_upload.name.split("_", 1)
+        filename = parts[1] if len(parts) > 1 else matching_upload.name
+
+    if not filename and log_lines:
+        for line in log_lines:
+            if "Planilha recebida:" in line.message:
+                raw_p = line.message.split("Planilha recebida:", 1)[1].strip()
+                p_name = Path(raw_p).name
+                parts = p_name.split("_", 1)
+                filename = parts[1] if len(parts) > 1 else p_name
+                break
+
+    # Contagem de linhas e progresso
+    progress = parse_progress_from_log(real_task_id)
+    if (progress.get("total_lines") or 0) == 0 and job_id:
+        progress = parse_progress_from_log(job_id)
+
+    total_lines = progress.get("total_lines") or 0
+    processed_lines = progress.get("processed_lines") or 0
+
+    if total_lines == 0 and matching_upload:
+        try:
+            from automacao.planilha import validar_planilha_previa
+            val_res = validar_planilha_previa(matching_upload)
+            total_lines = val_res.get("total_rows", 0)
+        except Exception:
+            pass
+
+    # Se o lote ficou travado como 'running' ou 'pending' há mais de 1 hora sem worker ativo, normaliza para falha
+    if status in ("running", "pending", "started") and started_at_str:
+        dt_start = _parse_dt(started_at_str)
+        if dt_start and (datetime.now() - dt_start).total_seconds() > 3600:
+            status = "failed"
+
+    if status in ("completed", "success"):
+        if total_lines > 0 and processed_lines == 0:
+            processed_lines = total_lines
+        error_count = 0
+        percent = 100
+    elif status in ("error", "failed"):
+        error_count = max(1, total_lines - processed_lines) if total_lines > 0 else 1
+        percent = min(100, int(round((processed_lines / total_lines) * 100))) if total_lines > 0 else 0
+    else:
+        error_count = 0
+        percent = min(100, int(round((processed_lines / total_lines) * 100))) if total_lines > 0 else 0
+
+    if duration_sec is None:
+        duration_sec = _safe_duration_seconds(_parse_dt(started_at_str), _parse_dt(ended_at_str))
 
     item = {
-        "id": task_id,
-        "task_id": task_id,
-        "job_id": rq_job_id,
+        "id": job_id or real_task_id,
+        "task_id": real_task_id,
+        "job_id": job_id or real_task_id,
         "status": status,
         "username": username,
         "ip": ip,
-        "started_at": _to_iso(started_at),
-        "ended_at": _to_iso(ended_at),
+        "started_at": started_at_str,
+        "ended_at": ended_at_str,
         "duration_sec": duration_sec,
+        "filename": filename or "relatorio.xlsx",
+        "total_items": total_lines,
+        "total_lines": total_lines,
+        "processed_lines": processed_lines,
+        "success_count": processed_lines if status in ("completed", "success") else 0,
+        "error_count": error_count,
+        "percent": percent,
     }
+
     _upsert_job(
-        task_id=task_id,
-        job_id=rq_job_id,
+        task_id=real_task_id,
+        job_id=job_id,
         username=username,
         ip=ip,
         status=status,
-        started_at=item["started_at"],
-        ended_at=item["ended_at"],
+        started_at=started_at_str,
+        ended_at=ended_at_str,
         duration_sec=duration_sec,
     )
     return item
@@ -692,32 +775,39 @@ def summary() -> dict[str, int]:
     jobs = list_jobs()
     return {
         "total_jobs": len(jobs),
-        "success_jobs": sum(1 for item in jobs if item.get("status") == "completed"),
-        "error_jobs": sum(1 for item in jobs if item.get("status") == "error"),
-        "running_jobs": sum(1 for item in jobs if item.get("status") == "running"),
+        "success_jobs": sum(1 for item in jobs if item.get("status") in ("completed", "success")),
+        "error_jobs": sum(1 for item in jobs if item.get("status") in ("error", "failed")),
+        "running_jobs": sum(1 for item in jobs if item.get("status") in ("running", "started")),
     }
 
 
 def actions_for_job(task_id: str) -> list[dict[str, Any]]:
     _ensure_schema()
+    resolved_ids = _resolve_task_ids(task_id)
+    placeholders = ",".join("?" * len(resolved_ids))
     try:
         with _db_connect() as conn:
             rows = conn.execute(
-                """
+                f"""
                 SELECT action_type, actor, ip, timestamp
                 FROM job_actions
-                WHERE task_id = ?
+                WHERE task_id IN ({placeholders})
                 ORDER BY COALESCE(timestamp, created_at) ASC
                 """,
-                (task_id,),
+                tuple(resolved_ids),
             ).fetchall()
         if rows:
             return [
                 {
+                    "action": row["action_type"],
                     "action_type": row["action_type"],
+                    "tipo": row["action_type"],
                     "actor": row["actor"],
                     "ip": row["ip"],
+                    "target": f"{row['actor']} ({row['ip']})" if row["actor"] else (row["ip"] or "—"),
+                    "status": "ERRO" if "erro" in row["action_type"].lower() else "OK",
                     "timestamp": row["timestamp"],
+                    "created_at": row["timestamp"],
                 }
                 for row in rows
             ]
@@ -725,7 +815,12 @@ def actions_for_job(task_id: str) -> list[dict[str, Any]]:
         logger.exception("Falha ao carregar actions do SQLite | task_id=%s", task_id)
 
     job_item = _build_job_item(task_id)
-    lines = _parse_log_lines(task_id)
+    lines: list[ParsedLogLine] = []
+    for tid in resolved_ids:
+        lines = _parse_log_lines(tid)
+        if lines:
+            break
+
     items: list[dict[str, Any]] = []
     for line in lines:
         msg = line.message
@@ -742,13 +837,20 @@ def actions_for_job(task_id: str) -> list[dict[str, Any]]:
             ]
         ):
             ts = _to_iso(line.timestamp)
-            _insert_action(task_id, msg, actor=job_item.get("username"), ip=job_item.get("ip"), timestamp=ts)
+            actor = job_item.get("username")
+            ip = job_item.get("ip")
+            _insert_action(task_id, msg, actor=actor, ip=ip, timestamp=ts)
             items.append(
                 {
+                    "action": msg,
                     "action_type": msg,
-                    "actor": job_item.get("username"),
-                    "ip": job_item.get("ip"),
+                    "tipo": msg,
+                    "actor": actor,
+                    "ip": ip,
+                    "target": f"{actor} ({ip})" if actor else (ip or "—"),
+                    "status": "ERRO" if "erro" in norm else "OK",
                     "timestamp": ts,
+                    "created_at": ts,
                 }
             )
     return items
@@ -756,16 +858,18 @@ def actions_for_job(task_id: str) -> list[dict[str, Any]]:
 
 def steps_for_job(task_id: str) -> list[dict[str, Any]]:
     _ensure_schema()
+    resolved_ids = _resolve_task_ids(task_id)
+    placeholders = ",".join("?" * len(resolved_ids))
     try:
         with _db_connect() as conn:
             rows = conn.execute(
-                """
+                f"""
                 SELECT name, status, started_at, ended_at, metadata_json
                 FROM job_steps
-                WHERE task_id = ?
+                WHERE task_id IN ({placeholders})
                 ORDER BY COALESCE(started_at, created_at) ASC
                 """,
-                (task_id,),
+                tuple(resolved_ids),
             ).fetchall()
         if rows:
             items_from_db: list[dict[str, Any]] = []
@@ -776,12 +880,29 @@ def steps_for_job(task_id: str) -> list[dict[str, Any]]:
                         metadata = json.loads(row["metadata_json"])
                     except Exception:
                         metadata = None
+
+                msg = None
+                if metadata:
+                    if "numero" in metadata:
+                        msg = f"Linha {metadata.get('linha_atual')}/{metadata.get('total_linhas')} (Número {metadata.get('numero')})"
+                    elif "duration_s" in metadata:
+                        msg = f"Duração: {metadata.get('duration_s')}s"
+                if not msg:
+                    msg = row["name"].replace("_", " ").title()
+
+                ts = row["started_at"] or row["ended_at"]
                 items_from_db.append(
                     {
                         "name": row["name"],
+                        "step": row["name"],
+                        "nome": row["name"],
                         "status": row["status"],
                         "started_at": row["started_at"],
                         "ended_at": row["ended_at"],
+                        "timestamp": ts,
+                        "created_at": ts,
+                        "message": msg,
+                        "detalhes": msg,
                         "metadata": metadata,
                     }
                 )
@@ -789,7 +910,12 @@ def steps_for_job(task_id: str) -> list[dict[str, Any]]:
     except Exception:
         logger.exception("Falha ao carregar steps do SQLite | task_id=%s", task_id)
 
-    lines = _parse_log_lines(task_id)
+    lines: list[ParsedLogLine] = []
+    for tid in resolved_ids:
+        lines = _parse_log_lines(tid)
+        if lines:
+            break
+
     items: list[dict[str, Any]] = []
     last_timestamp: datetime | None = None
 
@@ -804,12 +930,19 @@ def steps_for_job(task_id: str) -> list[dict[str, Any]]:
             status = "completed" if stage.startswith("fim_") or stage.endswith("_executado") else "running"
             ts = _to_iso(line.timestamp or last_timestamp)
             _insert_step(task_id, stage, status=status, started_at=ts, ended_at=ts if status == "completed" else None)
+            display_msg = stage.replace("_", " ").title()
             items.append(
                 {
                     "name": stage,
+                    "step": stage,
+                    "nome": stage,
                     "status": status,
                     "started_at": ts,
                     "ended_at": ts if status == "completed" else None,
+                    "timestamp": ts,
+                    "created_at": ts,
+                    "message": display_msg,
+                    "detalhes": display_msg,
                     "metadata": None,
                 }
             )
@@ -823,6 +956,7 @@ def steps_for_job(task_id: str) -> list[dict[str, Any]]:
                 "total_linhas": int(proc_match.group(2)),
                 "numero": proc_match.group(3),
             }
+            display_msg = f"Linha {metadata['linha_atual']}/{metadata['total_linhas']} (Número {metadata['numero']})"
             _insert_step(
                 task_id,
                 "processamento_linha_planilha",
@@ -834,9 +968,15 @@ def steps_for_job(task_id: str) -> list[dict[str, Any]]:
             items.append(
                 {
                     "name": "processamento_linha_planilha",
+                    "step": "processamento_linha_planilha",
+                    "nome": "processamento_linha_planilha",
                     "status": "running",
                     "started_at": ts,
                     "ended_at": None,
+                    "timestamp": ts,
+                    "created_at": ts,
+                    "message": display_msg,
+                    "detalhes": display_msg,
                     "metadata": metadata,
                 }
             )
@@ -846,16 +986,18 @@ def steps_for_job(task_id: str) -> list[dict[str, Any]]:
 
 def browser_logs_for_job(task_id: str) -> list[dict[str, Any]]:
     _ensure_schema()
+    resolved_ids = _resolve_task_ids(task_id)
+    placeholders = ",".join("?" * len(resolved_ids))
     try:
         with _db_connect() as conn:
             rows = conn.execute(
-                """
+                f"""
                 SELECT level, type, message, url, timestamp
                 FROM browser_logs
-                WHERE task_id = ?
+                WHERE task_id IN ({placeholders})
                 ORDER BY COALESCE(timestamp, created_at) ASC
                 """,
-                (task_id,),
+                tuple(resolved_ids),
             ).fetchall()
         if rows:
             return [
@@ -863,15 +1005,22 @@ def browser_logs_for_job(task_id: str) -> list[dict[str, Any]]:
                     "level": row["level"],
                     "type": row["type"],
                     "message": row["message"],
+                    "text": row["message"],
                     "url": row["url"],
                     "timestamp": row["timestamp"],
+                    "created_at": row["timestamp"],
                 }
                 for row in rows
             ]
     except Exception:
         logger.exception("Falha ao carregar browser_logs do SQLite | task_id=%s", task_id)
 
-    lines = _parse_log_lines(task_id)
+    lines: list[ParsedLogLine] = []
+    for tid in resolved_ids:
+        lines = _parse_log_lines(tid)
+        if lines:
+            break
+
     items: list[dict[str, Any]] = []
     for line in lines:
         msg = line.message
@@ -899,8 +1048,10 @@ def browser_logs_for_job(task_id: str) -> list[dict[str, Any]]:
                 "level": level,
                 "type": "browser",
                 "message": msg,
+                "text": msg,
                 "url": extracted_url,
                 "timestamp": _to_iso(line.timestamp),
+                "created_at": _to_iso(line.timestamp),
             }
         )
     return items
@@ -925,6 +1076,7 @@ def _artifact_id(path: Path) -> str:
 def artifacts_for_job(task_id: str) -> list[dict[str, Any]]:
     items: list[dict[str, Any]] = []
     _ARTIFACT_PATH_BY_ID.clear()
+    resolved_ids = _resolve_task_ids(task_id)
 
     for source in _artifact_sources():
         for file in source.rglob("*"):
@@ -933,7 +1085,7 @@ def artifacts_for_job(task_id: str) -> list[dict[str, Any]]:
             artifact_type = ARTIFACT_TYPE_BY_EXTENSION.get(file.suffix.lower())
             if not artifact_type:
                 continue
-            if task_id not in file.name and task_id not in str(file.parent):
+            if not any(tid in file.name or tid in str(file.parent) for tid in resolved_ids):
                 continue
 
             stat = file.stat()
@@ -979,15 +1131,16 @@ def artifacts_for_job(task_id: str) -> list[dict[str, Any]]:
 
     _ensure_schema()
     try:
+        placeholders = ",".join("?" * len(resolved_ids))
         with _db_connect() as conn:
             rows = conn.execute(
-                """
+                f"""
                 SELECT id, type, file_path, available, created_at
                 FROM artifacts
-                WHERE task_id = ?
+                WHERE task_id IN ({placeholders})
                 ORDER BY COALESCE(created_at, updated_at) DESC
                 """,
-                (task_id,),
+                tuple(resolved_ids),
             ).fetchall()
         if rows:
             return [
@@ -995,6 +1148,7 @@ def artifacts_for_job(task_id: str) -> list[dict[str, Any]]:
                     "id": row["id"],
                     "type": row["type"],
                     "file_path": row["file_path"],
+                    "filename": Path(row["file_path"]).name if row["file_path"] else "artefato",
                     "available": bool(row["available"]),
                     "created_at": row["created_at"],
                 }

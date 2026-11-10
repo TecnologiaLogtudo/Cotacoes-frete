@@ -18,8 +18,8 @@ const LS_KEYS = {
 
 const statusMap = {
   PENDING: { label: 'Aguardando', tone: '' },
-  STARTED: { label: 'Em execução', tone: 'ok' },
-  RUNNING: { label: 'Em execução', tone: 'ok' },
+  STARTED: { label: 'Em execução', tone: 'running' },
+  RUNNING: { label: 'Em execução', tone: 'running' },
   PAUSED: { label: 'Pausado', tone: 'warn' },
   SUCCESS: { label: 'Concluído', tone: 'ok' },
   COMPLETED: { label: 'Concluído', tone: 'ok' },
@@ -1264,7 +1264,7 @@ function HistoryTab({ jobs, onOpenJob, onViewDetails, onRefresh }) {
                   const statusMeta = getHistoryStatusMeta(j.status)
                   const total = j.total_items ?? j.total_lines ?? (j.items?.length) ?? 0
                   const processed = j.processed_lines ?? j.success_count ?? (statusMeta.tone === 'completed' ? total : 0)
-                  const errors = j.error_count ?? j.failed_items ?? 0
+                  const errors = j.error_count != null ? j.error_count : (statusMeta.tone === 'failed' ? Math.max(1, total - processed) : (j.failed_items ?? 0))
                   const percent = j.percent ?? (total > 0 ? Math.round((processed / total) * 100) : (statusMeta.tone === 'completed' ? 100 : 0))
 
                   return (
@@ -1752,10 +1752,10 @@ function AdminTab({ summary, jobs, onRefresh, notify }) {
                 {steps.length > 0 ? (
                   steps.map((s, i) => (
                     <tr key={i}>
-                      <td><b>{s.step || s.nome}</b></td>
+                      <td><b>{s.step || s.nome || s.name}</b></td>
                       <td><StatusIndicator status={s.status} /></td>
-                      <td>{s.message || s.detalhes || '—'}</td>
-                      <td>{formatIsoForDisplay(s.timestamp || s.created_at)}</td>
+                      <td>{s.message || s.detalhes || (s.metadata ? JSON.stringify(s.metadata) : '—')}</td>
+                      <td>{formatIsoForDisplay(s.timestamp || s.started_at || s.created_at)}</td>
                     </tr>
                   ))
                 ) : (
@@ -1783,10 +1783,15 @@ function AdminTab({ summary, jobs, onRefresh, notify }) {
                 {actions.length > 0 ? (
                   actions.map((a, i) => (
                     <tr key={i}>
-                      <td>{a.action || a.tipo}</td>
-                      <td className="mono">{a.target || a.seletor || '—'}</td>
-                      <td>{a.status || 'OK'}</td>
-                      <td>{formatIsoForDisplay(a.created_at || a.timestamp)}</td>
+                      <td>{a.action || a.action_type || a.tipo}</td>
+                      <td className="mono">{a.target || a.seletor || a.actor || '—'}</td>
+                      <td>
+                        <span className={`status-indicator ${String(a.status).toUpperCase() === 'ERRO' ? 'bad' : 'ok'}`}>
+                          <span className="dot" />
+                          <span>{a.status || 'OK'}</span>
+                        </span>
+                      </td>
+                      <td>{formatIsoForDisplay(a.timestamp || a.created_at)}</td>
                     </tr>
                   ))
                 ) : (
@@ -1815,7 +1820,7 @@ function AdminTab({ summary, jobs, onRefresh, notify }) {
                     <tr key={i}>
                       <td><span className="mono" style={{ color: b.level === 'error' ? 'var(--bad)' : 'inherit' }}>{b.level || 'INFO'}</span></td>
                       <td className="mono">{b.text || b.message}</td>
-                      <td>{formatIsoForDisplay(b.timestamp)}</td>
+                      <td>{formatIsoForDisplay(b.timestamp || b.created_at)}</td>
                     </tr>
                   ))
                 ) : (

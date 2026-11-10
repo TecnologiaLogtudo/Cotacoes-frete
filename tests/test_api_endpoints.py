@@ -121,3 +121,50 @@ def test_get_job_status_failed_job_observabilidade(client: TestClient):
     assert data["current_phase"] == "F3"
     assert "items" in data
 
+
+def test_admin_steps_and_actions_by_job_id(client: TestClient):
+    from automacao.observabilidade import register_job_stage, register_job_started, register_job_message
+    task_id = "task-admin-test-01"
+    job_id = "admin-test-01"
+    register_job_started(task_id, job_id=job_id, username="operador_teste", started_at="2026-11-10T11:00:00")
+    register_job_stage(task_id, "inicio_execucao_playwright", timestamp="2026-11-10T11:00:01")
+    register_job_stage(task_id, "fim_execucao_playwright", timestamp="2026-11-10T11:00:05", duration_s=4.0)
+    register_job_message(task_id, "[stage] fim_execucao_playwright", timestamp="2026-11-10T11:00:05", username="operador_teste")
+
+    # Busca steps usando o job_id sequencial
+    resp_steps = client.get(f"/api/admin/jobs/{job_id}/steps")
+    assert resp_steps.status_code == 200
+    steps_data = resp_steps.json()
+    assert "items" in steps_data
+    assert len(steps_data["items"]) >= 2
+    step1 = steps_data["items"][0]
+    assert step1["name"] == "inicio_execucao_playwright"
+    assert step1["step"] == "inicio_execucao_playwright"
+    assert step1["message"] != ""
+    assert step1["timestamp"] is not None
+
+    # Busca actions usando o job_id sequencial
+    resp_actions = client.get(f"/api/admin/jobs/{job_id}/actions")
+    assert resp_actions.status_code == 200
+    actions_data = resp_actions.json()
+    assert "items" in actions_data
+    assert len(actions_data["items"]) >= 1
+    act1 = actions_data["items"][0]
+    assert "action" in act1
+    assert "actor" in act1
+    assert act1["status"] in ("OK", "ERRO")
+    assert act1["timestamp"] is not None
+
+    # Valida campos enriquecidos na listagem de jobs
+    resp_jobs = client.get("/api/jobs")
+    assert resp_jobs.status_code == 200
+    jobs = resp_jobs.json()["jobs"]
+    matching = [j for j in jobs if j.get("job_id") == job_id or j.get("task_id") == task_id]
+    assert len(matching) == 1
+    j_item = matching[0]
+    assert "filename" in j_item
+    assert "total_items" in j_item
+    assert "processed_lines" in j_item
+    assert "percent" in j_item
+
+

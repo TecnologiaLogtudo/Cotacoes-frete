@@ -5,6 +5,21 @@ Todas as alterações notáveis neste projeto serão documentadas neste arquivo.
 ## [Unreleased] - 2026-11-10
 
 ### Corrigido
+- `automacao/observabilidade.py`:
+  - **Resolução bidirecional de identificadores (`_resolve_task_ids`)**: `steps_for_job`, `actions_for_job`, `browser_logs_for_job` e `artifacts_for_job` agora consultam indistintamente tanto pelo `task_id` (UUID do RQ) quanto pelo `job_id` sequencial (ex.: `10112026-0001`), eliminando consultas vazias quando a interface envia o `job_id`.
+  - **Enriquecimento de `_build_job_item`**: identificação dinâmica do nome original do arquivo na pasta de uploads ou nos logs (`filename`), contagem de linhas e progresso real (`total_items`, `total_lines`, `processed_lines`, `error_count`, `percent`), corrigindo o problema de lotes exibindo `ITENS 0/0` e nome genérico (`relatorio.xlsx`) no histórico.
+  - **Limpeza de chaves fantasmas do Redis**: remoção da varredura irrestrita `rq:job:*` que gerava lotes fantasmas com status `running`/`pending` na inicialização; adição de detecção de estagnação (> 1h) para evitar que lotes sem worker fiquem como "Aguardando" indefinidamente.
+  - **Padronização de contratos nos endpoints de auditoria**: normalização de aliases nas respostas (`step`/`name`/`nome`, `timestamp`/`created_at`, `message`/`detalhes`, `action`/`action_type`, `target`/`actor`).
+- `automacao/steps/passo2_cotacoes.py`:
+  - Conexão de listeners `page.on("console")` e `page.on("pageerror")` no Playwright para capturar os logs reais do console e erros JavaScript do navegador diretamente nos logs da automação e na tabela de logs do navegador.
+- `web/src/App.jsx`:
+  - Atualização do mapa de status (`statusMap`): status `STARTED` e `RUNNING` passam a usar `tone: 'running'` (azul com indicador luminoso), deixando de ser renderizados em verde como se fossem concluídos.
+  - Correção na aba **Admin**: a tabela de Etapas agora renderiza corretamente as colunas Etapa (`s.name || s.step || s.nome`), Mensagem (`s.message || s.detalhes`) e Data/Hora (`formatIsoForDisplay(s.timestamp || s.started_at)`); a aba Ações agora exibe o tipo de ação e o ator/IP corretamente.
+  - Correção na aba **Histórico**: cálculo de erros e total de itens conectado aos novos campos enriquecidos da API.
+- `web/src/styles.css`:
+  - Adicionado estilo `.status-indicator.running` com tom azul (`#3b82f6`) e indicador pulsante sutil.
+- `tests/test_api_endpoints.py`:
+  - Adicionado teste `test_admin_steps_and_actions_by_job_id` validando busca de etapas e ações via `job_id` sequencial e integridade dos campos enriquecidos de lote.
 - `automacao/api.py`:
   - Corrigida a extração de mensagens de erro detalhadas em `get_job_status` a partir dos eventos em `job_actions` (`action_type`) registrados na observabilidade SQLite, permitindo que exceções do robô (ex: `Nao foi encontrada opcao de remetente para a cidade/base: PORTO SEGURO`) sejam devolvidas diretamente ao frontend.
   - Sincronização do status dos itens do lote na resposta de `/api/jobs/{task_id}`: leitura da planilha correspondente no diretório de uploads e atribuição de `status: FAILED` e mensagem explicativa a todos os itens pendentes quando o job encerra com erro.

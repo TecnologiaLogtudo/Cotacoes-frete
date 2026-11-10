@@ -691,6 +691,14 @@ main {
   background: var(--muted);
 }
 
+.status-indicator.running {
+  color: #3b82f6;
+}
+.status-indicator.running .dot {
+  background: #3b82f6;
+  box-shadow: 0 0 6px rgba(59, 130, 246, 0.6);
+}
+
 .status-indicator.ok {
   color: var(--ok);
 }

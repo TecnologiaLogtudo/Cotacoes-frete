@@ -521,6 +521,21 @@ def executar_passo_2_lote(
                 pass
         page.on("dialog", _lidar_com_dialogo)
 
+        def _on_console(msg):
+            try:
+                print(f"[browser] [{msg.type}] {msg.text}")
+            except Exception:
+                pass
+
+        def _on_pageerror(err):
+            try:
+                print(f"[browser] [pageerror] {err}")
+            except Exception:
+                pass
+
+        page.on("console", _on_console)
+        page.on("pageerror", _on_pageerror)
+
         try:
             realizar_login_na_sessao(page, usuario=usuario, senha=senha)
 
@@ -593,6 +608,21 @@ def executar_passo_2(
             except Exception:
                 pass
         page.on("dialog", _lidar_com_dialogo)
+
+        def _on_console(msg):
+            try:
+                print(f"[browser] [{msg.type}] {msg.text}")
+            except Exception:
+                pass
+
+        def _on_pageerror(err):
+            try:
+                print(f"[browser] [pageerror] {err}")
+            except Exception:
+                pass
+
+        page.on("console", _on_console)
+        page.on("pageerror", _on_pageerror)
 
         realizar_login_na_sessao(page, usuario=usuario, senha=senha)
         preencher_formulario_linha(
