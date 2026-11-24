@@ -1,5 +1,7 @@
 import os
 
+from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
+
 from Conectividade.playwright_vps_connect import PlaywrightVPSConfig, PlaywrightVPSClient
 from automacao.config_loader import carregar_mapeamento
 
@@ -27,7 +29,11 @@ def realizar_login(usuario: str, senha: str) -> None:
 
         print("Clicando no botão Entrar...")
         page.locator(SEL_ENTRAR).click()
-        page.wait_for_load_state("networkidle")
+        try:
+            page.locator(SEL_ENTRAR).wait_for(state="hidden", timeout=10000)
+        except PlaywrightTimeoutError:
+            pass
+        page.wait_for_load_state("domcontentloaded")
 
         print("Login concluído com sucesso!")
 

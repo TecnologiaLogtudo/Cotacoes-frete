@@ -2,7 +2,23 @@
 
 Todas as alterações notáveis neste projeto serão documentadas neste arquivo.
 
-## [Unreleased] - 2026-11-10
+## [Unreleased] - 2026-11-24
+
+### Otimizado
+- `automacao/steps/passo2_cotacoes.py` & `automacao/steps/login.py`:
+  - **Redução drástica do tempo de espera pós-login**: remoção de esperas estáticas cegas (`wait_for_timeout(10000)` e `wait_for_timeout(4000)`) e substituição de `networkidle` bloqueante por esperas ativas dirigidas a elementos (`wait_for(state="visible")` no botão `Adicionar` e `wait_for(state="hidden")` no botão `Entrar`). O preenchimento da cotação agora inicia imediatamente no momento em que a página fica pronta (~1-2s).
+  - **Reatividade nas listas suspensas (`selecionar_opcao_select`)**: corrigido o encerramento prematuro do loop quando o `<select>` continha apenas o placeholder padrão (`Selecione...`). Agora realiza polling ativo (a cada 250ms, timeout 15s) até que a opção alvo realmente apareça no DOM, despachando eventos `change` e `input`.
+  - **Espera dinâmica de remetente (`selecionar_remetente_por_base`)**: pesquisa de remetente agora aguarda ativamente a resposta do servidor e a renderização das opções correspondentes à base no `<select>`, eliminando quebras causadas por latência de rede.
+  - **Espera de preenchimento assíncrono de endereço (`copiar_uf_e_cidade_origem_para_destino`)**: aguarda ativamente o preenchimento automático de `dados_UFIni` e `dados_cMunIni` decorrentes da seleção do remetente antes de tentar ler e copiar para o destino.
+
+### Adicionado
+- `tests/test_passo2_cotacoes.py`:
+  - Testes unitários para `selecionar_opcao_select` com atraso assíncrono e placeholder inicial.
+  - Teste de timeout para opção inexistente em `selecionar_opcao_select`.
+  - Teste de busca com polling em `selecionar_remetente_por_base`.
+  - Teste de espera de preenchimento assíncrono em `copiar_uf_e_cidade_origem_para_destino`.
+
+## [0.2.0] - 2026-11-10
 
 ### Corrigido
 - `Conectividade/playwright_vps_connect.py`:

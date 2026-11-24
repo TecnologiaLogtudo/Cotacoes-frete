@@ -271,4 +271,93 @@ def test_carregar_linhas_amazon_real_se_existir():
     assert l1.frete_negociado == "500,00"
 
 
+def test_selecionar_opcao_select_com_carregamento_assincrono():
+    from unittest.mock import MagicMock
+    from automacao.steps.passo2_cotacoes import selecionar_opcao_select
+
+    page = MagicMock()
+    chamadas = [0]
+    def mock_eval_on_selector_all(seletor, js_code):
+        chamadas[0] += 1
+        if chamadas[0] == 1:
+            return [{"value": "", "label": "Selecione..."}]
+        elif chamadas[0] == 2:
+            return [{"value": "", "label": "Selecione..."}, {"value": "1", "label": "Opção Inicial"}]
+        else:
+            return [
+                {"value": "", "label": "Selecione..."},
+                {"value": "1", "label": "Opção Inicial"},
+                {"value": "2", "label": "LOGTUDO MATRIZ - BAHIA"},
+            ]
+
+    page.eval_on_selector_all.side_effect = mock_eval_on_selector_all
+
+    selecionar_opcao_select(page, "select[name='dados_agencias_id']", "LOGTUDO MATRIZ - BAHIA", timeout_ms=3000)
+
+    assert chamadas[0] >= 3
+    page.locator.return_value.select_option.assert_called_with(value="2")
+
+
+def test_selecionar_opcao_select_timeout_quando_nao_encontra():
+    from unittest.mock import MagicMock
+    import pytest
+    from automacao.steps.passo2_cotacoes import selecionar_opcao_select
+
+    page = MagicMock()
+    page.eval_on_selector_all.return_value = [{"value": "", "label": "Selecione..."}]
+
+    with pytest.raises(ValueError, match="Nao foi possivel encontrar a opcao"):
+        selecionar_opcao_select(page, "select[name='dados_agencias_id']", "INEXISTENTE", timeout_ms=600)
+
+
+def test_selecionar_remetente_por_base_com_carregamento_assincrono():
+    from unittest.mock import MagicMock
+    from automacao.steps.passo2_cotacoes import selecionar_remetente_por_base
+
+    page = MagicMock()
+    chamadas = [0]
+    def mock_eval_on_selector_all(seletor, js_code):
+        chamadas[0] += 1
+        if chamadas[0] < 3:
+            return [{"value": "", "label": "Carregando..."}]
+        return [
+            {"value": "100", "label": "02.012.862/0031-85 - TAM LINHAS AEREAS - FORTALEZA/CE"},
+        ]
+
+    page.eval_on_selector_all.side_effect = mock_eval_on_selector_all
+
+    selecionar_remetente_por_base(page, base="FORTALEZA", timeout_ms=3000)
+
+    assert chamadas[0] >= 3
+    page.locator.return_value.select_option.assert_called_with(value="100")
+
+
+def test_copiar_uf_e_cidade_origem_para_destino_aguarda_preenchimento():
+    from unittest.mock import MagicMock
+    from automacao.steps.passo2_cotacoes import copiar_uf_e_cidade_origem_para_destino
+
+    page = MagicMock()
+    chamadas = [0]
+
+    def mock_input_value():
+        if chamadas[0] < 2:
+            return ""
+        return "CE"
+
+    def mock_eval_on_selector(seletor, js_code):
+        chamadas[0] += 1
+        if chamadas[0] < 2:
+            return "Selecione..."
+        return "FORTALEZA"
+
+    page.locator.return_value.input_value.side_effect = mock_input_value
+    page.eval_on_selector.side_effect = mock_eval_on_selector
+
+    copiar_uf_e_cidade_origem_para_destino(page, timeout_ms=3000)
+
+    assert chamadas[0] >= 2
+    page.locator.return_value.fill.assert_any_call("CE")
+    page.locator.return_value.fill.assert_any_call("FORTALEZA")
+
+
 

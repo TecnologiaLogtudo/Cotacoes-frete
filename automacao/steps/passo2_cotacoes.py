@@ -65,11 +65,17 @@ def _capturar_screenshot_erro(page, artifacts_path: str | None) -> Path | None:
     page.screenshot(path=str(screenshot_path), full_page=True)
     return screenshot_path
 
-def aguardar_renderizacao_total(page, contexto: str) -> None:
-    print(f"Aguardando renderizacao total da pagina ({contexto})...")
+def aguardar_renderizacao_total(page, contexto: str, timeout_ms: int = 5000) -> None:
+    print(f"Aguardando renderizacao da pagina ({contexto})...")
     page.wait_for_load_state("domcontentloaded")
-    page.wait_for_load_state("networkidle")
-    page.wait_for_function("() => document.readyState === 'complete'")
+    try:
+        page.wait_for_load_state("networkidle", timeout=1500)
+    except PlaywrightTimeoutError:
+        pass
+    try:
+        page.wait_for_function("() => document.readyState === 'complete'", timeout=timeout_ms)
+    except PlaywrightTimeoutError:
+        pass
 
 
 
@@ -147,28 +153,31 @@ def realizar_login_na_sessao(page, usuario: str, senha: str) -> None:
     print("Preenchendo credenciais...")
     page.locator(SEL_USUARIO).fill(usuario)
     page.locator(SEL_SENHA).fill(senha)
-    page.wait_for_timeout(1500)
 
     print("Enviando formulário de login...")
     page.locator(SEL_ENTRAR).click()
-    print("Aguardando 10s apos clicar em Entrar...")
-    page.wait_for_timeout(10000)
+    print("Aguardando confirmação do login...")
+    try:
+        page.locator(SEL_ENTRAR).wait_for(state="hidden", timeout=10000)
+    except PlaywrightTimeoutError:
+        print("Botao Entrar nao sumiu em 10s; prosseguindo com verificacao de renderizacao...")
     aguardar_renderizacao_total(page, contexto="pos-login")
     print("Login concluído com sucesso!")
 
 
 def acessar_url_cotacoes_e_aguardar(page, usuario: str | None = None, senha: str | None = None) -> None:
-    print(f"Acessando a URL de cotacoes de frete: {URL_PASSO_2}")
-    page.goto(URL_PASSO_2, wait_until="domcontentloaded")
-    aguardar_renderizacao_total(page, contexto="tela de cotacoes de frete")
-    print("Aguardando 4s antes de procurar o botao Adicionar...")
-    page.wait_for_timeout(4000)
-    
+    precisa_navegar = page.url != URL_PASSO_2 or not page.locator(SEL_ADICIONAR).first.is_visible()
+    if precisa_navegar:
+        print(f"Acessando a URL de cotacoes de frete: {URL_PASSO_2}")
+        page.goto(URL_PASSO_2, wait_until="domcontentloaded")
+        aguardar_renderizacao_total(page, contexto="tela de cotacoes de frete")
+
+    print("Aguardando botao Adicionar ficar visivel...")
     try:
-        # Tenta verificar se o botão Adicionar está visível em até 5 segundos
-        page.locator(SEL_ADICIONAR).first.wait_for(state="visible", timeout=5000)
+        # Tenta verificar se o botão Adicionar está visível imediatamente ou em até 8 segundos
+        page.locator(SEL_ADICIONAR).first.wait_for(state="visible", timeout=8000)
     except PlaywrightTimeoutError:
-        print("Botao Adicionar nao ficou visivel em 5s. Verificando se a sessao expirou...")
+        print("Botao Adicionar nao ficou visivel em 8s. Verificando se a sessao expirou...")
         
         # Identifica se a página atual é de login por URL ou pela visibilidade do campo de usuário
         is_login_page = "login" in page.url.lower() or page.locator(SEL_USUARIO).is_visible()
@@ -179,12 +188,10 @@ def acessar_url_cotacoes_e_aguardar(page, usuario: str | None = None, senha: str
             print(f"Re-acessando a URL de cotacoes de frete: {URL_PASSO_2}")
             page.goto(URL_PASSO_2, wait_until="domcontentloaded")
             aguardar_renderizacao_total(page, contexto="tela de cotacoes de frete")
-            print("Aguardando 4s antes de procurar o botao Adicionar...")
-            page.wait_for_timeout(4000)
-            page.locator(SEL_ADICIONAR).first.wait_for(state="visible")
+            page.locator(SEL_ADICIONAR).first.wait_for(state="visible", timeout=15000)
         else:
-            print("Nao foi detectada tela de login. Aguardando o tempo restante (25s) pelo botao Adicionar...")
-            page.locator(SEL_ADICIONAR).first.wait_for(state="visible", timeout=25000)
+            print("Nao foi detectada tela de login. Aguardando tempo adicional (20s) pelo botao Adicionar...")
+            page.locator(SEL_ADICIONAR).first.wait_for(state="visible", timeout=20000)
 
 def marcar_pagamento_frete(page) -> None:
     seletor_radio = f"{SEL_RADIO_PAGAMENTO_FRETE}[value='{OPT_PAGAMENTO_FRETE_RADIO_VALUE}']"
@@ -280,29 +287,40 @@ def _encontrar_melhor_opcao(opcoes: list[dict[str, str]], alvo: str) -> dict[str
     return None
 
 
-def selecionar_opcao_select(page, seletor: str, alvo: str, nome_campo: str = "", timeout_ms: int = 10000) -> None:
-    page.locator(seletor).wait_for(state="visible", timeout=timeout_ms)
+def selecionar_opcao_select(page, seletor: str, alvo: str, nome_campo: str = "", timeout_ms: int = 15000) -> None:
+    page.locator(seletor).wait_for(state="attached", timeout=timeout_ms)
     
     opcoes = []
+    opcao = None
     inicio = datetime.now()
+    print(f"Aguardando opcao '{alvo}' no campo {nome_campo or seletor}...")
     while (datetime.now() - inicio).total_seconds() * 1000 < timeout_ms:
-        opcoes = page.eval_on_selector_all(
-            f"{seletor} option",
-            "els => els.map(el => ({ value: el.value, label: (el.textContent || '').replace(/\\s+/g, ' ').trim() }))",
-        )
-        opcoes_validas = [o for o in opcoes if o["value"] or o["label"]]
-        if opcoes_validas:
-            break
-        page.wait_for_timeout(200)
+        try:
+            opcoes = page.eval_on_selector_all(
+                f"{seletor} option",
+                "els => els.map(el => ({ value: el.value, label: (el.textContent || '').replace(/\\s+/g, ' ').trim() }))",
+            )
+            opcao = _encontrar_melhor_opcao(opcoes, alvo)
+            if opcao and opcao.get("value") is not None:
+                break
+        except Exception:
+            pass
+        page.wait_for_timeout(250)
 
-    opcao = _encontrar_melhor_opcao(opcoes, alvo)
     if opcao and opcao.get("value") is not None:
         print(f"Selecionando {nome_campo or seletor}: '{opcao['label']}' (value='{opcao['value']}')")
         page.locator(seletor).select_option(value=opcao["value"])
+        try:
+            page.eval_on_selector(
+                seletor,
+                "el => { el.dispatchEvent(new Event('input', { bubbles: true })); el.dispatchEvent(new Event('change', { bubbles: true })); }",
+            )
+        except Exception:
+            pass
     else:
-        labels_disponiveis = [o["label"] for o in opcoes if o["label"]]
+        labels_disponiveis = [o["label"] for o in opcoes if o.get("label")]
         raise ValueError(
-            f"Nao foi possivel encontrar a opcao '{alvo}' no campo {nome_campo or seletor}. "
+            f"Nao foi possivel encontrar a opcao '{alvo}' no campo {nome_campo or seletor} em {timeout_ms/1000:.0f}s. "
             f"Opcoes disponiveis na tela: {labels_disponiveis}"
         )
 
@@ -327,64 +345,104 @@ def preencher_obs_interna(page, nome_motorista: str, placa: str, data_referencia
     page.locator(SEL_OBS_INTERNA).fill(texto_obs)
 
 
-def copiar_uf_e_cidade_origem_para_destino(page) -> None:
-    uf_ini = page.locator(SEL_UF_INI).input_value().strip()
+def copiar_uf_e_cidade_origem_para_destino(page, timeout_ms: int = 15000) -> None:
+    print("Aguardando preenchimento automatico de UF inicial e Cidade inicial...")
+    inicio = datetime.now()
+    uf_ini = ""
+    cidade_ini = ""
+
+    while (datetime.now() - inicio).total_seconds() * 1000 < timeout_ms:
+        try:
+            uf_val = page.locator(SEL_UF_INI).input_value().strip()
+            cid_val = page.eval_on_selector(
+                SEL_CIDADE_INI,
+                "el => { const opt = el.options[el.selectedIndex]; return opt ? (opt.textContent || '').trim() : ''; }",
+            )
+            cid_val = (cid_val or "").strip()
+            if uf_val and cid_val and not any(ph in cid_val.lower() for ph in ["selecione", "escolha"]):
+                uf_ini = uf_val
+                cidade_ini = cid_val
+                break
+        except Exception:
+            pass
+        page.wait_for_timeout(250)
+
     if not uf_ini:
-        raise ValueError("Campo UF inicial (dados_UFIni) veio vazio; nao foi possivel preencher F. Prest.")
+        uf_ini = page.locator(SEL_UF_INI).input_value().strip()
+    if not uf_ini:
+        raise ValueError(f"Campo UF inicial ({SEL_UF_INI}) permaneceu vazio apos {timeout_ms/1000:.0f}s; nao foi possivel preencher F. Prest.")
+
+    if not cidade_ini:
+        cidade_ini = page.eval_on_selector(
+            SEL_CIDADE_INI,
+            "el => { const opt = el.options[el.selectedIndex]; return opt ? (opt.textContent || '').trim() : ''; }",
+        )
+        cidade_ini = (cidade_ini or "").strip()
+    if not cidade_ini:
+        raise ValueError(f"Nao foi possivel obter a cidade inicial selecionada em {SEL_CIDADE_INI} apos {timeout_ms/1000:.0f}s.")
 
     print(f"Copiando UF inicial para F. Prest.: {uf_ini}")
     page.locator(SEL_UF_FIM).fill(uf_ini)
-
-    cidade_ini = page.eval_on_selector(
-        SEL_CIDADE_INI,
-        "el => { const opt = el.options[el.selectedIndex]; return opt ? (opt.textContent || '').trim() : ''; }",
-    )
-    cidade_ini = (cidade_ini or "").strip()
-    if not cidade_ini:
-        raise ValueError("Nao foi possivel obter a cidade inicial selecionada em dados_cMunIni.")
 
     print(f"Copiando cidade inicial para pesquisa de cidade final: {cidade_ini}")
     page.locator(SEL_PESQ_CIDADE_FIM).fill(cidade_ini)
     print("Clicando em Pesquisar (Cidade final)...")
     page.locator(SEL_BTN_PESQ_CIDADE_FIM).click()
-    page.wait_for_timeout(1000)
+    page.wait_for_timeout(500)
 
 
 def selecionar_categoria_veiculo_por_perfil(page, perfil: str) -> None:
     print("Clicando em Pesquisar (Categoria Veículo)...")
     page.locator(SEL_BTN_PESQ_CATEGORIA_VEICULO).click()
-    page.wait_for_timeout(1000)
     print(f"Selecionando Cat. Veículo com valor da coluna 'Perfil': {perfil}")
     selecionar_opcao_select(page, SEL_CATEGORIA_VEICULO, perfil, nome_campo="Cat. Veículo")
 
 
-def selecionar_remetente_por_base(page, base: str) -> None:
+def selecionar_remetente_por_base(page, base: str, timeout_ms: int = 15000) -> None:
     print(f"Pesquisando remetente por termo: {OPT_TERMO_PESQ_REMETENTE}")
     page.locator(SEL_PESQ_REMETENTE).fill(OPT_TERMO_PESQ_REMETENTE)
-    page.wait_for_timeout(1000)
     page.locator(SEL_BTN_PESQ_REMETENTE).click()
-    page.wait_for_timeout(1000)
 
-    page.locator(SEL_REMETENTE).wait_for(state="visible")
-    opcoes = page.eval_on_selector_all(
-        f"{SEL_REMETENTE} option",
-        "els => els.map(el => ({ value: el.value, label: (el.textContent || '').trim() }))",
-    )
+    print(f"Aguardando opcoes de remetente para a base '{base}'...")
+    page.locator(SEL_REMETENTE).wait_for(state="attached", timeout=timeout_ms)
 
+    inicio = datetime.now()
     opcao_encontrada = None
-    for opcao in opcoes:
-        if not opcao["value"]:
-            continue
-
-        if _remetente_label_matches_base(opcao["label"], base):
-            opcao_encontrada = opcao
-            break
+    opcoes = []
+    while (datetime.now() - inicio).total_seconds() * 1000 < timeout_ms:
+        try:
+            opcoes = page.eval_on_selector_all(
+                f"{SEL_REMETENTE} option",
+                "els => els.map(el => ({ value: el.value, label: (el.textContent || '').trim() }))",
+            )
+            for opcao in opcoes:
+                if not opcao.get("value"):
+                    continue
+                if _remetente_label_matches_base(opcao["label"], base):
+                    opcao_encontrada = opcao
+                    break
+            if opcao_encontrada:
+                break
+        except Exception:
+            pass
+        page.wait_for_timeout(250)
 
     if not opcao_encontrada:
-        raise ValueError(f"Nao foi encontrada opcao de remetente para a cidade/base: {base}")
+        labels_disponiveis = [o["label"] for o in opcoes if o.get("label")]
+        raise ValueError(
+            f"Nao foi encontrada opcao de remetente para a cidade/base '{base}' em {timeout_ms/1000:.0f}s. "
+            f"Opcoes disponiveis na tela: {labels_disponiveis}"
+        )
 
     print(f"Selecionando remetente para Base '{base}': {opcao_encontrada['label']}")
     page.locator(SEL_REMETENTE).select_option(value=opcao_encontrada["value"])
+    try:
+        page.eval_on_selector(
+            SEL_REMETENTE,
+            "el => { el.dispatchEvent(new Event('input', { bubbles: true })); el.dispatchEvent(new Event('change', { bubbles: true })); }",
+        )
+    except Exception:
+        pass
 
 
 def clicar_cadastrar_e_aguardar(page) -> None:
